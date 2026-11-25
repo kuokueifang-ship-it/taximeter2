@@ -1,0 +1,3026 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>計程助手</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+    font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.35); border-radius: 9999px; }
+
+  /* 日間明亮主題自動覆寫樣式（保持原版佈局與圓角比例） */
+  body.theme-light { background-color: #f1f5f9 !important; color: #0f172a !important; }
+  body.theme-light header,
+  body.theme-light main,
+  body.theme-light section,
+  body.theme-light .bg-\[\#151e32\] {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08) !important;
+  }
+  body.theme-light .bg-\[\#111827\],
+  body.theme-light .bg-\[\#1e293b\]\/90 {
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+  }
+  body.theme-light .bg-\[\#0d1424\] {
+    background-color: #f8fafc !important;
+    border-color: #94a3b8 !important;
+  }
+  body.theme-light .bg-\[\#1e293b\] {
+    background-color: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #1e293b !important;
+  }
+  body.theme-light .text-slate-100,
+  body.theme-light .text-slate-200,
+  body.theme-light #estimateResultBox .text-white { color: #0f172a !important; }
+  body.theme-light .text-slate-300,
+  body.theme-light .text-slate-400 { color: #475569 !important; }
+  body.theme-light .text-sky-400 { color: #0369a1 !important; }
+  body.theme-light #hwyDistLabel {
+    background-color: #e0f2fe !important;
+    border-color: #0284c7 !important;
+    color: #0369a1 !important;
+  }
+  body.theme-light #fareAmount { color: #b45309 !important; filter: none !important; }
+  body.theme-light #btnLocalRoad.bg-sky-600,
+  body.theme-light #btnHighwayRoad.bg-sky-600 {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+  }
+  body.theme-light input[type="text"],
+  body.theme-light input[type="number"] {
+    background-color: #ffffff !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+  }
+  body.theme-light .bg-slate-800 { background-color: #e2e8f0 !important; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #receiptPrintArea, #receiptPrintArea * { visibility: visible; }
+    #receiptPrintArea {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 58mm;
+      background: #fff !important;
+      color: #000 !important;
+      padding: 4mm;
+      margin: 0;
+      border: none;
+      box-shadow: none;
+    }
+  }
+</style>
+</head>
+<body class="bg-[#0b1120] text-slate-100 min-h-screen">
+
+  <div class="w-full max-w-md sm:max-w-5xl mx-auto px-3 sm:px-4 py-3 space-y-3">
+
+    <!-- 頂部卡片（手機直屏上下排列、橫屏自動換行防溢出、平板車機單行橫向集中上半部） -->
+    <header class="bg-[#151e32] rounded-3xl border border-slate-700/60 p-3.5 sm:px-4 sm:py-3 shadow-xl flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap sm:items-center sm:justify-between gap-2.5">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-400 flex items-center justify-center text-xl shrink-0">
+          🚕
+        </div>
+        <h1 class="text-xl sm:text-2xl font-black tracking-wide text-amber-400 whitespace-nowrap">計程助手</h1>
+      </div>
+
+      <!-- 報表 / 紀錄 / 設定 三大按鈕 -->
+      <div class="grid grid-cols-3 gap-1.5 w-full sm:w-auto sm:flex-1 sm:max-w-[270px]">
+        <button type="button" onclick="openReportModal()" class="py-2 px-1.5 rounded-2xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/70 text-slate-100 text-xs sm:text-sm font-black flex items-center justify-center gap-1 whitespace-nowrap shadow-sm transition active:scale-95">
+          <span>📊</span><span>報表</span>
+        </button>
+        <button type="button" onclick="openHistoryModal()" class="py-2 px-1.5 rounded-2xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/70 text-slate-100 text-xs sm:text-sm font-black flex items-center justify-center gap-1 whitespace-nowrap shadow-sm transition active:scale-95">
+          <span>📋</span><span>紀錄</span>
+        </button>
+        <button type="button" onclick="openSettingsModal()" class="py-2 px-1.5 rounded-2xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/70 text-slate-100 text-xs sm:text-sm font-black flex items-center justify-center gap-1 whitespace-nowrap shadow-sm transition active:scale-95">
+          <span>⚙️</span><span>設定</span>
+        </button>
+      </div>
+
+      <!-- 費率與 GPS 狀態膠囊列 -->
+      <div id="topStatusPillRow" class="bg-[#1e293b]/90 rounded-2xl border border-slate-700/70 px-3 py-2 flex items-center justify-between gap-2 w-full lg:w-auto min-w-0">
+        <div id="ratePeriodTag" class="flex items-center gap-1.5 text-xs sm:text-sm font-black text-sky-400 min-w-0 truncate">
+          <span>☀️</span><span class="truncate">日間費率</span>
+        </div>
+        <span id="gpsStatusBadge" class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-200 text-emerald-950 whitespace-nowrap shrink-0 shadow-xs">
+          定位中...
+        </span>
+      </div>
+    </header>
+
+    <!-- 主內容區：手機直屏單欄；手機橫屏/平板/車載大螢幕左右雙欄集中在上半部 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+
+      <!-- 左欄：主跳錶儀表板 -->
+      <main class="bg-[#151e32] rounded-3xl border border-slate-700/60 p-3.5 shadow-xl space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5">
+            <span id="pillEmpty" class="px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-600 text-white whitespace-nowrap shadow-sm">空車</span>
+            <span id="pillActive" class="px-2.5 py-1 rounded-xl text-xs font-black bg-[#1e293b] text-slate-400 border border-slate-700 whitespace-nowrap">載客</span>
+            <span id="pillPaused" class="px-2.5 py-1 rounded-xl text-xs font-black bg-[#1e293b] text-slate-400 border border-slate-700 whitespace-nowrap">停等</span>
+          </div>
+          <span id="tariffTypeLabel" class="text-xs font-bold text-slate-400 whitespace-nowrap">標準起跳</span>
+        </div>
+
+        <!-- 應收車資超大顯示區 -->
+        <div class="bg-[#0d1424] rounded-2xl border border-slate-700/80 px-4 py-3.5 shadow-inner space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs sm:text-sm font-black text-slate-200">應收車資 <span class="text-amber-400">（試算參考）</span></div>
+              <div class="text-xl font-black text-slate-400 mt-0.5">NT$</div>
+            </div>
+            <div class="text-right">
+              <div id="fareAmount" class="mono text-6xl sm:text-7xl font-black tracking-tight text-amber-400 leading-none drop-shadow-[0_0_18px_rgba(251,191,36,0.28)]">
+                0
+              </div>
+            </div>
+          </div>
+          <!-- 跳錶金額下方合規免責聲明小卡片 -->
+          <div class="rounded-xl bg-[#a1887f] text-white text-[11px] sm:text-xs font-bold text-center py-2 px-3 leading-snug shadow-xs">
+            ※ 僅供試算參考，實際收費以法定計費表或雙方約定為準
+          </div>
+        </div>
+
+        <!-- 黃金操作區：大顆綠色「開始載客跳錶」/「暫停・結算」控制鈕 -->
+        <div>
+          <button type="button" id="btnStartTrip" onclick="startTrip()" class="w-full py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 text-white text-lg font-black shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition active:scale-[0.98]">
+            <span>▶</span><span>開始載客跳錶</span>
+          </button>
+
+          <div id="activeTripControls" class="hidden grid grid-cols-2 gap-2.5">
+            <button type="button" id="btnPauseTrip" onclick="togglePauseTrip()" class="py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 border border-amber-400/50 text-white text-base font-black shadow-lg flex items-center justify-center gap-1.5 transition active:scale-[0.98]">
+              <span>⏸</span><span>暫停計費</span>
+            </button>
+            <button type="button" id="btnEndTrip" onclick="openCheckoutModal()" class="py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 border border-rose-400/50 text-white text-base font-black shadow-lg flex items-center justify-center gap-1.5 transition active:scale-[0.98]">
+              <span>⏹</span><span>結算下車</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 自動感應與 一般道路 / 高速公路 切換框 -->
+        <div class="bg-[#111827] rounded-2xl border border-slate-700/70 p-2.5 space-y-2.5">
+          <div class="flex items-center justify-between gap-1.5 min-w-0">
+            <button type="button" id="btnAutoRoad" onclick="toggleAutoRoad()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-black bg-sky-950/90 text-sky-300 border border-sky-500/60 whitespace-nowrap shrink-0 active:scale-95">
+              <span>🤖</span><span id="btnAutoRoadLabel">自動感應：開</span>
+            </button>
+            <span id="autoRoadStatusText" class="text-[11px] font-bold text-slate-400 truncate text-right">
+              國道 1/3/5 號
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <button type="button" id="btnLocalRoad" onclick="manualSetRoadMode('local')" class="py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-sky-600 text-white border border-sky-400 shadow-md flex items-center justify-center gap-1 whitespace-nowrap transition active:scale-95">
+              <span>🛣️</span><span>一般道路</span>
+            </button>
+            <button type="button" id="btnHighwayRoad" onclick="manualSetRoadMode('highway')" class="py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-[#1e293b] text-slate-300 border border-slate-700 flex items-center justify-center gap-1 whitespace-nowrap transition active:scale-95">
+              <span>🚄</span><span>高速公路</span>
+            </button>
+          </div>
+
+          <!-- 目前 / 起點 / 終點 位置資訊（還原至道路切換鈕下方） -->
+          <div class="pt-1.5 border-t border-slate-700/60 space-y-1 text-xs">
+            <div class="truncate text-slate-400">目前：<strong id="meterCurrPosText" class="text-slate-200 font-bold">等待定位中...</strong></div>
+            <div class="truncate text-emerald-500 font-bold">🟢 起點：<strong id="meterStartPosText" class="text-emerald-400 font-bold">尚未定位</strong></div>
+            <div class="truncate text-rose-500 font-bold">🔴 終點：<strong id="meterEndPosText" class="text-rose-400 font-bold">尚未設定</strong></div>
+          </div>
+        </div>
+
+        <!-- 國道通行費 (eTag) 雙列不重疊資訊卡 -->
+        <div class="bg-[#111827] rounded-2xl border border-slate-700/70 px-3 py-2 space-y-1">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 text-xs font-black text-slate-200 whitespace-nowrap">
+              <span>🎟️</span><span>國道 eTag 通行費</span>
+            </div>
+            <span class="mono text-sm font-black text-amber-400 whitespace-nowrap">NT$ <span id="tollDisplayVal">0</span></span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] text-slate-400 whitespace-nowrap">國道 1/3/5 號 ($1.2/km)</span>
+            <span id="hwyDistLabel" class="mono text-xs font-black text-sky-300 bg-sky-900/80 border border-sky-400/50 px-2 py-0.5 rounded-lg whitespace-nowrap">0.00 km</span>
+          </div>
+        </div>
+
+        <!-- 行駛里程 / 目前車速 / 延滯計時 三格儀表 -->
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-[#111827] rounded-2xl border border-slate-700/70 p-2.5 text-center">
+            <div class="text-[11px] font-bold text-slate-400">行駛里程</div>
+            <div class="mono text-sm font-black text-sky-400 mt-1 whitespace-nowrap">
+              <span id="distValue">0.00</span> km
+            </div>
+          </div>
+          <div class="bg-[#111827] rounded-2xl border border-slate-700/70 p-2.5 text-center">
+            <div class="text-[11px] font-bold text-slate-400">目前車速</div>
+            <div class="mono text-sm font-black text-sky-400 mt-1 whitespace-nowrap">
+              <span id="speedValue">0</span> km/h
+            </div>
+          </div>
+          <div class="bg-[#111827] rounded-2xl border border-slate-700/70 p-2.5 text-center">
+            <div id="waitLabelText" class="text-[11px] font-bold text-slate-400">延滯計時</div>
+            <div id="waitValue" class="mono text-sm font-black text-sky-400 mt-1 whitespace-nowrap">00:00</div>
+          </div>
+        </div>
+
+        <!-- 雙模式通用：行程 / 每公里里程進度條（含小計程車在路上跑） -->
+        <div class="px-0.5 pt-1">
+          <div class="flex items-center gap-2.5">
+            <span id="kmProgressLabel" class="text-xs font-bold text-slate-400 whitespace-nowrap w-16">里程進度</span>
+            <div class="relative flex-1 h-4 flex items-center">
+              <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden relative border border-slate-700/70">
+                <div id="kmProgressBar" class="h-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-300" style="width: 0%"></div>
+                <div class="absolute inset-0 border-b border-dashed border-slate-400/35 pointer-events-none" style="top: -45%;"></div>
+              </div>
+              <span id="kmCarIcon" class="absolute -top-2 text-base leading-none transition-all duration-300 pointer-events-none select-none drop-shadow" style="left: 4%; transform: translateX(-50%) scaleX(-1);">🚕</span>
+            </div>
+            <span id="kmPctText" class="mono text-xs font-bold text-slate-400 w-9 text-right">0%</span>
+          </div>
+        </div>
+
+        <!-- 續跳里程 & 延滯跳錶 進度條（僅傳統跳錶制顯示） -->
+        <div id="taxiStepProgressSection" class="space-y-2 px-0.5 pb-1">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs font-bold text-slate-400 whitespace-nowrap w-16">續跳里程</span>
+            <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="distProgressBar" class="h-full bg-emerald-400 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <span id="distPctText" class="mono text-xs font-bold text-slate-400 w-9 text-right">0%</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs font-bold text-slate-400 whitespace-nowrap w-16">延滯跳錶</span>
+            <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="waitProgressBar" class="h-full bg-amber-400 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <span id="waitPctText" class="mono text-xs font-bold text-slate-400 w-9 text-right">0%</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- 右欄：📍 路線設定與車資預估卡片 -->
+      <section class="bg-[#151e32] rounded-3xl border border-slate-700/60 p-3.5 shadow-xl space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-sm sm:text-base font-black text-slate-100 flex items-center gap-1.5">
+            <span>📍</span><span>路線設定與車資預估</span>
+          </h2>
+          <button type="button" onclick="swapStartEndAddr()" class="px-3 py-1.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-sky-400 whitespace-nowrap shrink-0 active:scale-95">
+            ⇅ 起終互換
+          </button>
+        </div>
+
+        <!-- 上車起點 ＋ 目前位置 -->
+        <div class="flex gap-2">
+          <input type="text" id="inputStartAddr" oninput="onStartAddrManualInput()" placeholder="上車起點（留空自動帶入目前位置）" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[#111827] border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+          <button type="button" onclick="fillCurrentLocation()" class="px-3 py-2.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-sky-400 whitespace-nowrap shrink-0 active:scale-95">
+            📍 目前位置
+          </button>
+        </div>
+
+        <!-- 終點輸入 ＋ 清空 -->
+        <div class="flex gap-2">
+          <input type="text" id="inputEndAddr" oninput="refreshUI()" placeholder="輸入地址、路名、地標..." class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[#111827] border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+          <button type="button" onclick="clearRouteInputs()" class="px-3.5 py-2.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-slate-300 whitespace-nowrap shrink-0 active:scale-95">
+            清空
+          </button>
+        </div>
+
+        <!-- 填入終點/起點切換 ＋ 常用地標膠囊群 -->
+        <div id="landmarkChipsContainer" class="flex flex-wrap items-center gap-2"></div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          點選地標快速帶入；長按地標可刪除；按「+ 新增常用點」新增常用地點。
+        </p>
+
+        <!-- 試算結果顯示區 -->
+        <div id="estimateResultBox" class="hidden rounded-2xl bg-[#0d1424] border border-sky-500/40 p-3 text-xs space-y-1.5"></div>
+
+        <!-- 智慧導航備援啟動區 -->
+        <div id="navLaunchFallbackBox" class="hidden rounded-2xl bg-[#0d1424] border border-amber-400/60 p-3 text-xs space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="font-bold text-amber-300 leading-snug">🧭 導航連結已就緒（若未自動跳轉請點下方按鈕）：</div>
+            <button type="button" onclick="dismissNavFallbackForever()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-black text-slate-300 whitespace-nowrap shrink-0 active:scale-95">
+              ✕ 關閉
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <a id="navDirectAnchor" href="#" target="_blank" rel="noopener noreferrer" class="py-2.5 px-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-center flex items-center justify-center gap-1 shadow">
+              <span>🗺️</span><span>開啟 Google 地圖導航</span>
+            </a>
+            <button type="button" onclick="copyNavLinkToClipboard()" class="py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-black">
+              複製連結
+            </button>
+          </div>
+          <div class="text-[10px] text-slate-400">※ 若本機已能正常直開導航，點右上角「✕ 關閉」後本機日後將不再顯示此框。</div>
+        </div>
+
+        <!-- 試算車資大按鈕 -->
+        <button type="button" id="btnCalcRoute" onclick="estimateFare()" class="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-base font-black shadow-lg shadow-blue-950/60 flex items-center justify-center gap-2 transition active:scale-[0.98]">
+          <span>🔍</span><span>試算車資</span>
+        </button>
+
+        <!-- 導航並跳錶 單一全寬主按鈕 -->
+        <div>
+          <button type="button" onclick="openExternalNavigation(true)" class="w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white text-base font-black shadow-md flex items-center justify-center gap-1.5 transition active:scale-[0.98]">
+            <span>🚕</span><span>導航並跳錶</span>
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 法律合規常駐免責聲明 -->
+    <footer class="text-center text-xs font-bold text-slate-300 px-2 pb-2 leading-relaxed">
+      ※ 本工具僅供車資試算與記帳輔助參考，實際收費以法定計費表或雙方約定為準。
+    </footer>
+
+  </div>
+
+  <!-- 下車結算視窗 -->
+  <div id="checkoutModal" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2.5 overflow-y-auto">
+    <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-3.5 shadow-2xl border border-slate-700 flex flex-col max-h-[92dvh] my-auto">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2.5 shrink-0">
+        <h3 class="font-black text-base text-amber-400">⏹ 下車結算確認</h3>
+        <button type="button" onclick="closeModal('checkoutModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-2.5 pr-0.5">
+        <div class="bg-[#0d1424] rounded-2xl p-2.5 border border-slate-700/70 space-y-1 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">跳錶基本車資：</span>
+            <span class="mono font-bold text-slate-100">NT$ <span id="chkMeterVal">0</span></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">國道通行費 (eTag)：</span>
+            <span class="mono font-black text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded">NT$ <span id="chkTollVal">0</span></span>
+          </div>
+          <div class="flex justify-between border-t border-slate-700/80 pt-1 text-sm font-black">
+            <span>應收總計：</span>
+            <span class="mono text-amber-400">NT$ <span id="chkTotalVal">0</span></span>
+          </div>
+        </div>
+
+        <!-- 國道通行費快速微調 -->
+        <div class="space-y-1">
+          <div class="text-[11px] font-bold text-slate-400">🎟️ 國道通行費手動微調（元）</div>
+          <div class="grid grid-cols-6 gap-1">
+            <button type="button" onclick="addCheckoutToll(20)" class="py-1.5 rounded-xl bg-sky-300 hover:bg-sky-200 border border-sky-200 text-[11px] font-black text-slate-950 shadow-xs">+20</button>
+            <button type="button" onclick="addCheckoutToll(40)" class="py-1.5 rounded-xl bg-sky-300 hover:bg-sky-200 border border-sky-200 text-[11px] font-black text-slate-950 shadow-xs">+40</button>
+            <button type="button" onclick="addCheckoutToll(60)" class="py-1.5 rounded-xl bg-sky-300 hover:bg-sky-200 border border-sky-200 text-[11px] font-black text-slate-950 shadow-xs">+60</button>
+            <button type="button" onclick="addCheckoutToll(100)" class="py-1.5 rounded-xl bg-sky-300 hover:bg-sky-200 border border-sky-200 text-[11px] font-black text-slate-950 shadow-xs">+100</button>
+            <button type="button" onclick="openCustomTollModal('checkout')" class="py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-300 text-[11px] font-black text-slate-950 shadow-xs">自訂</button>
+            <button type="button" onclick="resetCheckoutToll()" class="py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-[11px] font-black text-white shadow-xs">歸零</button>
+          </div>
+        </div>
+
+        <!-- 優惠折扣快捷按鈕 -->
+        <div class="space-y-1">
+          <div class="text-[11px] font-bold text-slate-400">🏷️ 優惠折扣 / 去零頭</div>
+          <div class="grid grid-cols-5 gap-1">
+            <button type="button" onclick="applyDiscount('round10')" class="py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 border border-emerald-300 text-[11px] font-black text-slate-950 shadow-xs">去零頭</button>
+            <button type="button" onclick="applyDiscount(0.95)" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-black text-slate-200">95折</button>
+            <button type="button" onclick="applyDiscount(0.9)" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-black text-slate-200">9折</button>
+            <button type="button" onclick="applyDiscount(0.85)" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-black text-slate-200">85折</button>
+            <button type="button" onclick="applyDiscount(0.8)" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-black text-slate-200">8折</button>
+          </div>
+        </div>
+
+        <!-- 實收車資金額微調 -->
+        <div class="space-y-1">
+          <div class="text-[11px] font-bold text-slate-400">💰 實收車資金額（可直接輸入約定包車價）</div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="adjustCheckoutAmount(-10)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-black text-sm">-10</button>
+            <input type="number" id="chkFinalAmount" class="mono flex-1 min-w-0 text-center text-2xl font-black py-1.5 px-2 rounded-xl bg-[#0d1424] border border-amber-400/70 text-amber-400 focus:outline-none">
+            <button type="button" onclick="adjustCheckoutAmount(10)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-black text-sm">+10</button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" onclick="confirmCheckout()" class="mt-2.5 shrink-0 w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-base font-black shadow-lg flex items-center justify-center gap-1.5 transition active:scale-[0.98]">
+        <span>✅</span><span>確認結算並存入紀錄</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 58mm 收據列印視窗（z-[60] 確保浮在紀錄清單上方，並支援分屏內部捲動） -->
+  <div id="receiptModal" class="hidden fixed inset-0 z-[60] bg-black/75 flex items-center justify-center p-2.5 overflow-y-auto">
+    <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-3.5 shadow-2xl border border-slate-700 flex flex-col max-h-[92dvh] my-auto">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2.5 shrink-0">
+        <h3 class="font-black text-base text-amber-400">🧾 58mm 乘車收據</h3>
+        <button type="button" onclick="closeModal('receiptModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold">✕</button>
+      </div>
+      <div class="flex-1 overflow-y-auto py-1">
+        <div id="receiptPrintArea" class="w-[220px] mx-auto bg-white text-black p-3 rounded-lg font-mono text-xs leading-relaxed"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-2.5 shrink-0">
+        <button type="button" onclick="printRawBT()" class="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black shadow">
+          🖨️ RawBT 藍牙直印
+        </button>
+        <button type="button" onclick="window.print()" class="py-2.5 rounded-xl bg-slate-700 text-white text-xs font-black">
+          瀏覽器列印
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 行程紀錄視窗 -->
+  <div id="historyModal" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3">
+    <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-md p-4 shadow-2xl border border-slate-700 flex flex-col max-h-[88vh]">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-2.5 mb-2.5">
+        <h3 class="font-black text-base text-amber-400">📋 行程紀錄清單</h3>
+        <button type="button" onclick="closeModal('historyModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
+      </div>
+      <div id="historyListContainer" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+      <button type="button" onclick="clearHistoryListOnly()" class="mt-3 w-full py-2.5 rounded-xl bg-rose-950/70 text-rose-300 border border-rose-700/60 text-xs font-extrabold">
+        🗑️ 清空行程紀錄清單（不影響報表數據）
+      </button>
+    </div>
+  </div>
+
+  <!-- 營運報表視窗 -->
+  <div id="reportModal" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3">
+    <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-md p-4 shadow-2xl border border-slate-700 flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-2.5 mb-2.5">
+        <h3 class="font-black text-base text-amber-400">📊 營運統計報表</h3>
+        <button type="button" onclick="closeModal('reportModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-1.5 mb-2.5">
+        <button type="button" id="tabReportDay" onclick="switchReportPeriod('day')" class="py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black">📅 日報表</button>
+        <button type="button" id="tabReportMonth" onclick="switchReportPeriod('month')" class="py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-black">📆 月報表</button>
+        <button type="button" id="tabReportYear" onclick="switchReportPeriod('year')" class="py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-black">🗓️ 年度報表</button>
+      </div>
+
+      <div class="flex items-center justify-between bg-[#0d1424] rounded-xl px-3 py-2 mb-2.5 border border-slate-700/70">
+        <button type="button" onclick="moveReportOffset(-1)" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-600 text-xs font-bold">◀ 上一期</button>
+        <span id="reportPeriodTitle" class="mono text-sm font-black text-amber-400">2026-11-23</span>
+        <button type="button" onclick="moveReportOffset(1)" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-600 text-xs font-bold">下一期 ▶</button>
+      </div>
+
+      <div id="reportContentArea" class="flex-1 overflow-y-auto space-y-2.5"></div>
+
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        <button type="button" onclick="exportReportCSV()" class="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black">
+          📥 匯出 Excel CSV
+        </button>
+        <button type="button" onclick="printShiftReceipt()" class="py-2.5 rounded-xl bg-slate-700 text-white text-xs font-black">
+          🖨️ 列印交班統計單
+        </button>
+      </div>
+      <button type="button" onclick="clearReportStatsOnly()" class="mt-2 w-full py-2.5 rounded-xl bg-rose-950/70 text-rose-300 border border-rose-700/60 text-xs font-extrabold">
+        🗑️ 清除報表統計數據（保留行程紀錄）
+      </button>
+    </div>
+  </div>
+
+  <!-- 系統設定視窗 -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3">
+    <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-md p-4 shadow-2xl border border-slate-700 flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-2.5 mb-2.5">
+        <h3 class="font-black text-base text-amber-400">⚙️ 費率與系統設定</h3>
+        <button type="button" onclick="closeModal('settingsModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
+        <!-- 1. 畫面與音效設定 -->
+        <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 space-y-2.5">
+          <div class="text-xs font-black text-sky-400">🖥️ 畫面與提示音效</div>
+
+          <div class="space-y-1.5">
+            <label class="block text-[11px] font-bold text-slate-300">畫面外觀日夜模式</label>
+            <div id="segThemeMode" class="grid grid-cols-3 gap-1.5">
+              <button type="button" data-val="auto" onclick="selectThemeMode('auto')" class="py-2 px-1.5 rounded-xl text-[11px] font-black border transition active:scale-95">🌗 日夜自動</button>
+              <button type="button" data-val="light" onclick="selectThemeMode('light')" class="py-2 px-1.5 rounded-xl text-[11px] font-black border transition active:scale-95">☀️ 全天淺色</button>
+              <button type="button" data-val="dark" onclick="selectThemeMode('dark')" class="py-2 px-1.5 rounded-xl text-[11px] font-black border transition active:scale-95">🌙 全天深色</button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-[11px] font-bold text-slate-300">跳錶提示音效（85% 響亮＋平板防休眠保活）</label>
+            <div id="segSound" class="grid grid-cols-2 gap-1.5">
+              <button type="button" data-val="on" onclick="selectSoundMode('on')" class="py-2 px-2 rounded-xl text-xs font-black border transition active:scale-95">🔊 開啟提示音</button>
+              <button type="button" data-val="off" onclick="selectSoundMode('off')" class="py-2 px-2 rounded-xl text-xs font-black border transition active:scale-95">🔇 靜音</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 跳錶費率參數 -->
+        <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 space-y-2.5">
+          <div class="text-xs font-black text-amber-400">🚕 計費模式與費率參數</div>
+
+          <div class="space-y-1.5">
+            <label class="block text-[11px] font-bold text-slate-300">計費模式切換</label>
+            <div id="segBillingMode" class="grid grid-cols-2 gap-1.5">
+              <button type="button" data-val="taxi" onclick="selectBillingMode('taxi')" class="py-2 px-1.5 rounded-xl text-[11px] font-black border transition active:scale-95">🚕 傳統跳錶制</button>
+              <button type="button" data-val="uber" onclick="selectBillingMode('uber')" class="py-2 px-1.5 rounded-xl text-[11px] font-black border transition active:scale-95">🚗 平台雙計制</button>
+            </div>
+          </div>
+
+          <div id="taxiRateFields" class="grid grid-cols-2 gap-2.5 pt-1">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">起跳金額 (元)</label>
+              <input type="number" id="setBaseFare" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">起跳里程 (公尺)</label>
+              <input type="number" id="setBaseDist" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">續跳距離 (公尺)</label>
+              <input type="number" id="setStepDist" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">續跳金額 (元)</label>
+              <input type="number" id="setStepFare" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">延滯計時 (秒)</label>
+              <input type="number" id="setWaitSec" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">延滯金額 (元)</label>
+              <input type="number" id="setWaitFare" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">夜間加成金額 (元)</label>
+              <input type="number" id="setNightAdd" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-slate-300">夜間加成時段</label>
+              <div id="segNightMode" class="grid grid-cols-2 gap-1">
+                <button type="button" data-val="auto" onclick="selectNightMode('auto')" class="py-2 px-1 rounded-xl text-[11px] font-black border transition active:scale-95">23~06時</button>
+                <button type="button" data-val="off" onclick="selectNightMode('off')" class="py-2 px-1 rounded-xl text-[11px] font-black border transition active:scale-95">關閉</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="uberRateFields" class="hidden grid grid-cols-2 gap-2.5 pt-1">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">基本行程費用 (元)</label>
+              <input type="number" step="0.1" id="setUberBase" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">最低行程費用 (元)</label>
+              <input type="number" step="1" id="setUberMin" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">每公里費用 (元/km)</label>
+              <input type="number" step="0.1" id="setUberPerKm" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">每分鐘費用 (元/分)</label>
+              <input type="number" step="0.1" id="setUberPerMin" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">平台處理費 (元)</label>
+              <input type="number" step="1" id="setUberServiceFee" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">加成倍數 (預設 1.0)</label>
+              <input type="number" step="0.1" min="1" id="setUberSurge" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-amber-400">
+            </div>
+            <p class="col-span-2 text-[10px] text-slate-400 leading-relaxed">
+              ※ 公式：max(最低費用, (基本費 + 公里×每公里費 + 行車分鐘×每分鐘費) × 倍數) + 處理費 + 國道 eTag
+            </p>
+          </div>
+        </div>
+
+        <!-- 3. 收據與列印設定 -->
+        <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 space-y-2.5">
+          <div class="text-xs font-black text-emerald-400">🧾 收據與列印設定</div>
+
+          <div class="space-y-1">
+            <label class="block text-[11px] font-bold text-slate-300">結算自動彈出收據</label>
+            <div id="segAutoReceipt" class="grid grid-cols-2 gap-1.5">
+              <button type="button" data-val="on" onclick="selectAutoReceipt('on')" class="py-2 px-1 rounded-xl text-[11px] font-black border transition active:scale-95">開啟</button>
+              <button type="button" data-val="off" onclick="selectAutoReceipt('off')" class="py-2 px-1 rounded-xl text-[11px] font-black border transition active:scale-95">關閉</button>
+            </div>
+          </div>
+
+          <div id="receiptInfoFields" class="space-y-2 pt-2 border-t border-slate-700/60">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">收據抬頭（車隊/車行）</label>
+                <input type="text" id="setFleet" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-emerald-400">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">車牌號碼</label>
+                <input type="text" id="setPlate" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-emerald-400">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">駕駛姓名 / 服務電話</label>
+              <input type="text" id="setDriver" onchange="saveSettings()" class="w-full px-3 py-2 rounded-xl bg-[#151e32] border border-slate-700 font-bold text-slate-100 focus:outline-none focus:border-emerald-400">
+            </div>
+          </div>
+          <p id="receiptInfoHint" class="text-[11px] text-slate-400 leading-relaxed">
+            ※ 啟用「結算自動彈出收據」後，才會顯示收據抬頭、車號與駕駛資訊欄位。
+          </p>
+        </div>
+
+        <div class="pt-1 space-y-2">
+          <button type="button" onclick="confirmAndCloseSettings()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black flex items-center justify-center gap-1.5 shadow-lg transition active:scale-[0.98]">
+            <span>✅</span><span>儲存設定並套用</span>
+          </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="exportBackupJson()" class="py-3 px-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95">
+              <span>💾</span><span>手動備份資料</span>
+            </button>
+            <button type="button" onclick="document.getElementById('backupFileInput').click()" class="py-3 px-2 rounded-xl bg-slate-700 hover:bg-slate-600 border border-slate-500/50 text-white font-black flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95">
+              <span>📂</span><span>還原備份資料</span>
+            </button>
+          </div>
+          <input type="file" id="backupFileInput" accept=".json" class="hidden" onchange="importBackupJson(event)">
+        </div>
+
+        <!-- 4. 版本資訊與手動檢查更新 -->
+        <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 flex items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.6</span></div>
+            <div id="updateCheckSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動檢查雲端最新版本</div>
+          </div>
+          <button type="button" onclick="checkAppUpdate(true)" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
+            🔄 檢查更新
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 發現新版本更新通知視窗 -->
+  <div id="updateAvailableModal" class="hidden fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-4">
+    <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-4 shadow-2xl border border-amber-400/60 space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
+        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.6</span></h3>
+        <button type="button" onclick="closeModal('updateAvailableModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
+      </div>
+      <div class="bg-[#0d1424] rounded-2xl p-3 border border-slate-700/70 space-y-1.5 text-xs">
+        <div class="text-slate-400 font-bold">✨ 本次更新內容：</div>
+        <p id="newVersionNotes" class="text-slate-100 leading-relaxed whitespace-pre-line font-semibold">優化系統穩定性與操作體驗</p>
+      </div>
+      <p class="text-[11px] text-emerald-300 leading-relaxed">
+        ※ 下載新版 APK 直接覆蓋安裝即可，<strong>原本的試用天數、解鎖狀態、報表與常用地點都會完整保留</strong>！
+      </p>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="closeModal('updateAvailableModal')" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">稍後再說</button>
+        <a id="newVersionDownloadBtn" href="https://reurl.cc/aEQ6Zl" target="_blank" rel="noopener noreferrer" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black text-center flex items-center justify-center gap-1 shadow-lg">
+          <span>🚀</span><span>立即前往更新</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自訂輸入視窗（z-[70] 確保浮在所有彈窗最上層） -->
+  <div id="customInputModal" class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
+    <div class="bg-[#151e32] text-slate-100 rounded-2xl w-full max-w-xs p-4 shadow-xl border border-slate-700 space-y-3">
+      <h4 id="customInputTitle" class="font-black text-sm text-amber-400">請輸入內容</h4>
+      <input type="text" id="customInputVal" class="w-full text-center text-lg font-black py-2.5 px-3 rounded-xl bg-[#0d1424] border border-slate-600 text-white focus:outline-none focus:border-amber-400">
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" onclick="closeModal('customInputModal')" class="py-2 rounded-xl bg-slate-800 text-xs font-bold">取消</button>
+        <button type="button" id="customInputConfirmBtn" class="py-2 rounded-xl bg-emerald-600 text-white text-xs font-black">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增常用點（簡稱＋完整地址）視窗 -->
+  <div id="addLandmarkModal" class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
+    <div class="bg-[#151e32] text-slate-100 rounded-2xl w-full max-w-sm p-4 shadow-xl border border-slate-700 space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
+        <h4 class="font-black text-sm text-amber-400">📌 新增常用地點</h4>
+        <button type="button" onclick="closeModal('addLandmarkModal')" class="w-7 h-7 rounded-full bg-slate-800 text-xs font-bold text-slate-300">✕</button>
+      </div>
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">1. 顯示簡稱（按鈕上顯示，簡短不佔版面）</label>
+          <input type="text" id="newLandmarkName" placeholder="例如：三峽公司、王先生家" class="w-full py-2.5 px-3 rounded-xl bg-[#0d1424] border border-slate-600 text-sm font-bold text-white focus:outline-none focus:border-emerald-400">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">2. 完整實際地址（導航與試算用）</label>
+          <input type="text" id="newLandmarkAddr" placeholder="例如：新北市三峽區介壽路一段316之2號" class="w-full py-2.5 px-3 rounded-xl bg-[#0d1424] border border-slate-600 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          ※ 點選膠囊時會自動把「完整實際地址」帶入起終點；若第 2 欄留空則直接帶入第 1 欄名稱。
+        </p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="closeModal('addLandmarkModal')" class="py-2.5 rounded-xl bg-slate-800 text-xs font-bold">取消</button>
+        <button type="button" onclick="saveNewLandmark()" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">✅ 儲存常用點</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自訂確認視窗（z-[70] 確保浮在所有彈窗最上層） -->
+  <div id="customConfirmModal" class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
+    <div class="bg-[#151e32] text-slate-100 rounded-2xl w-full max-w-xs p-4 shadow-xl border border-slate-700 space-y-3 text-center">
+      <div class="text-2xl">⚠️</div>
+      <p id="customConfirmText" class="text-xs font-bold leading-relaxed whitespace-pre-line text-slate-200"></p>
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" onclick="closeModal('customConfirmModal')" class="py-2 rounded-xl bg-slate-800 text-xs font-bold">取消</button>
+        <button type="button" id="customConfirmYesBtn" class="py-2 rounded-xl bg-rose-600 text-white text-xs font-black">確定執行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 浮動提示訊息 -->
+  <div id="toastBanner" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[80] bg-slate-900/95 border border-amber-400/50 text-amber-300 text-xs font-bold px-4 py-2.5 rounded-full shadow-xl whitespace-nowrap"></div>
+
+<script>
+  const APP_KEY = 'taximeter_dark_cockpit_v1';
+  const APP_VERSION = '1.0.6';
+  const UPDATE_MANIFEST_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/version.json';
+  const DEFAULT_UPDATE_URL = 'https://reurl.cc/aEQ6Zl';
+  const ETAG_RATE_PER_KM = 1.2;
+
+  const DEFAULT_SETTINGS = {
+    billingMode: 'taxi',
+    uberBase: 48,
+    uberMin: 85,
+    uberPerKm: 25,
+    uberPerMin: 3.4,
+    uberServiceFee: 10,
+    uberSurge: 1.0,
+    themeMode: 'auto',
+    sound: 'on',
+    baseFare: 85,
+    baseDist: 1250,
+    stepDist: 200,
+    stepFare: 5,
+    waitSec: 60,
+    waitFare: 5,
+    nightAdd: 20,
+    nightMode: 'auto',
+    autoReceipt: 'on',
+    showQuickReceipt: 'off',
+    hideNavFallback: false,
+    fleet: '計程助手車隊',
+    plate: 'TDX-8888',
+    driver: '駕駛服務專線'
+  };
+
+  const DEFAULT_LANDMARKS = [
+    { name: '三峽老街', addr: '新北市三峽區民權街' },
+    { name: '板橋車站', addr: '新北市板橋區縣民大道二段7號' },
+    { name: '桃園國際機場第一航廈', addr: '桃園市大園區航站南路15號' },
+    { name: '高鐵雲林站', addr: '雲林縣虎尾鎮站前東路301號' },
+    { name: '高鐵台中站', addr: '台中市烏日區站區二路8號' },
+    { name: '高鐵左營站', addr: '高雄市左營區高鐵路105號' }
+  ];
+
+  let appState = {
+    settings: { ...DEFAULT_SETTINGS },
+    landmarks: [...DEFAULT_LANDMARKS],
+    records: [],
+    meter: {
+      running: false,
+      paused: false,
+      distMeters: 0,
+      highwayDistMeters: 0,
+      tripSeconds: 0,
+      waitSeconds: 0,
+      manualTollFee: 0,
+      tollFee: 0,
+      roadMode: 'local',
+      autoRoad: true,
+      manualLockUntil: 0,
+      jumpCount: 0,
+      tripStartTime: '',
+      tripStartAddr: '',
+      targetTripMeters: 0
+    }
+  };
+
+  let fillTargetField = 'end';
+  let gpsPoints = [];
+  let lastSmoothPoint = null;
+  let kalmanState = null;
+  let currentSpeedKmh = 0;
+  let lastRoadQueryTs = 0;
+  let detectedRoadName = '';
+  let isOnTollFreeway135 = false;
+  let nonFreewayStreak = 0;
+  let boundStartGpsCoords = null;
+  let pendingInterruptedMeter = null;
+
+  function applyKalmanFilter(lat, lon, acc, ts) {
+    const variance = Math.max(acc, 3) ** 2;
+    if (!kalmanState) {
+      kalmanState = { lat, lon, variance, ts };
+      return { lat, lon, ts };
+    }
+    const dt = Math.max(0.1, (ts - kalmanState.ts) / 1000);
+    const q = Math.max(1.5, Math.min(25, (currentSpeedKmh / 3.6) * 0.8));
+    kalmanState.variance += dt * q * q;
+
+    const k = kalmanState.variance / (kalmanState.variance + variance);
+    kalmanState.lat += k * (lat - kalmanState.lat);
+    kalmanState.lon += k * (lon - kalmanState.lon);
+    kalmanState.variance = (1 - k) * kalmanState.variance;
+    kalmanState.ts = ts;
+
+    return { lat: kalmanState.lat, lon: kalmanState.lon, ts };
+  }
+
+  // 85% 響亮提示音＋車載平板防音訊休眠保活引擎
+  let audioCtx = null;
+  let keepAliveAudioEl = null;
+  let jumpWavUrl = null;
+  let roadWavUrl = null;
+
+  function buildBeepWavDataUri(freqs, durSec, gainLevel) {
+    const sampleRate = 22050;
+    const numSamples = Math.floor(sampleRate * durSec);
+    const dataBytes = numSamples * 2;
+    const buffer = new ArrayBuffer(44 + dataBytes);
+    const view = new DataView(buffer);
+    const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + dataBytes, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, dataBytes, true);
+
+    const half = Math.floor(numSamples / 2);
+    for (let i = 0; i < numSamples; i++) {
+      const freq = i < half ? freqs[0] : freqs[1];
+      const t = i / sampleRate;
+      const env = Math.min(1, i / 180) * Math.max(0, 1 - (i / numSamples) * 0.45);
+      const sample = Math.sin(2 * Math.PI * freq * t) * gainLevel * env;
+      view.setInt16(44 + i * 2, Math.max(-32767, Math.min(32767, Math.floor(sample * 32767))), true);
+    }
+
+    let bin = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return 'data:audio/wav;base64,' + btoa(bin);
+  }
+
+  function ensureWavAssets() {
+    if (!jumpWavUrl) jumpWavUrl = buildBeepWavDataUri([980, 1250], 0.24, 0.85);
+    if (!roadWavUrl) roadWavUrl = buildBeepWavDataUri([660, 880], 0.24, 0.85);
+    if (!keepAliveAudioEl) {
+      keepAliveAudioEl = new Audio(buildBeepWavDataUri([440, 440], 1.0, 0.0005));
+      keepAliveAudioEl.loop = true;
+      keepAliveAudioEl.volume = 0.01;
+    }
+  }
+
+  function unlockAndroidAudio() {
+    try {
+      ensureWavAssets();
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      if (audioCtx) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.01);
+      }
+      if (appState.settings.sound === 'on' && keepAliveAudioEl && keepAliveAudioEl.paused) {
+        keepAliveAudioEl.play().catch(() => {});
+      }
+    } catch (e) {}
+  }
+  document.addEventListener('pointerdown', unlockAndroidAudio, { passive: true });
+  document.addEventListener('touchstart', unlockAndroidAudio, { passive: true });
+
+  function playMeterSound(kind = 'jump') {
+    if (appState.settings.sound !== 'on') return;
+    unlockAndroidAudio();
+    let webAudioPlayed = false;
+    try {
+      if (audioCtx && audioCtx.state === 'running') {
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        if (kind === 'road') {
+          osc.frequency.setValueAtTime(660, t);
+          osc.frequency.setValueAtTime(880, t + 0.1);
+        } else {
+          osc.frequency.setValueAtTime(980, t);
+          osc.frequency.setValueAtTime(1250, t + 0.09);
+        }
+        gain.gain.setValueAtTime(0.85, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.25);
+        webAudioPlayed = true;
+      }
+    } catch (e) {}
+
+    if (!webAudioPlayed) {
+      try {
+        ensureWavAssets();
+        const fx = new Audio(kind === 'road' ? roadWavUrl : jumpWavUrl);
+        fx.volume = 0.85;
+        fx.play().catch(() => {});
+      } catch (e) {}
+    }
+  }
+
+  function toast(msg) {
+    const el = document.getElementById('toastBanner');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.add('hidden'), 2600);
+  }
+
+  function loadAppState() {
+    try {
+      const raw = localStorage.getItem(APP_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        appState.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+        if (Array.isArray(data.landmarks) && data.landmarks.length > 0) {
+          appState.landmarks = data.landmarks;
+        }
+        appState.records = Array.isArray(data.records) ? data.records : [];
+        if (data.meter) {
+          const wasRunning = Boolean(data.meter.running);
+          const hasProgress = (Number(data.meter.distMeters) || 0) > 10 || (Number(data.meter.tripSeconds) || 0) > 5;
+          const savedAgeMs = data.savedAt ? (Date.now() - Number(data.savedAt)) : 0;
+          if (wasRunning && hasProgress && savedAgeMs <= 4 * 60 * 60 * 1000) {
+            pendingInterruptedMeter = { ...data.meter };
+          }
+          appState.meter = {
+            ...appState.meter,
+            ...data.meter,
+            // 每次開啟 App 一律先停在「空車待機」安全狀態，絕不自動跳錶
+            running: false,
+            paused: false,
+            distMeters: 0,
+            highwayDistMeters: 0,
+            tripSeconds: 0,
+            waitSeconds: 0,
+            manualTollFee: 0,
+            tollFee: 0,
+            jumpCount: 0,
+            tripStartTime: '',
+            targetTripMeters: 0
+          };
+        }
+      }
+    } catch (e) {}
+  }
+
+  function saveAppState() {
+    try {
+      appState.savedAt = Date.now();
+      localStorage.setItem(APP_KEY, JSON.stringify(appState));
+    } catch (e) {}
+  }
+
+  function promptResumeInterruptedTrip() {
+    if (!pendingInterruptedMeter) return;
+    const saved = pendingInterruptedMeter;
+    pendingInterruptedMeter = null;
+    const kmStr = ((Number(saved.distMeters) || 0) / 1000).toFixed(2);
+    const minStr = Math.floor((Number(saved.tripSeconds) || 0) / 60);
+    const msg = `偵測到上次關機前有一筆未結算行程：\n行駛里程：${kmStr} km（約 ${minStr} 分鐘）\n\n要接續這筆行程繼續計費，還是歸零重新開始？`;
+    const confirmTextEl = document.getElementById('customConfirmText');
+    const yesBtn = document.getElementById('customConfirmYesBtn');
+    const modal = document.getElementById('customConfirmModal');
+    if (!confirmTextEl || !yesBtn || !modal) return;
+    const cancelBtn = modal.querySelector('button[onclick*="customConfirmModal"]');
+    const origCancelText = cancelBtn ? cancelBtn.textContent : '取消';
+    const origYesText = yesBtn.textContent;
+    const origYesClass = yesBtn.className;
+
+    confirmTextEl.textContent = msg;
+    if (cancelBtn) cancelBtn.textContent = '歸零重新開始';
+    yesBtn.textContent = '✅ 繼續接續計費';
+    yesBtn.className = 'py-2 rounded-xl bg-emerald-600 text-white text-xs font-black';
+
+    const restoreBtns = () => {
+      if (cancelBtn) cancelBtn.textContent = origCancelText;
+      yesBtn.textContent = origYesText;
+      yesBtn.className = origYesClass;
+    };
+
+    if (cancelBtn) {
+      cancelBtn.onclick = () => {
+        restoreBtns();
+        closeModal('customConfirmModal');
+        saveAppState();
+        toast('已歸零為空車待機狀態');
+      };
+    }
+    yesBtn.onclick = () => {
+      restoreBtns();
+      closeModal('customConfirmModal');
+      appState.meter = {
+        ...appState.meter,
+        ...saved,
+        running: true,
+        paused: false
+      };
+      saveAppState();
+      refreshUI();
+      toast(`已接續上次行程（${kmStr} km）繼續計費`);
+    };
+    modal.classList.remove('hidden');
+  }
+
+  function isNightHour() {
+    if (appState.settings.nightMode === 'off') return false;
+    const h = new Date().getHours();
+    return (h >= 23 || h < 6);
+  }
+
+  function applyThemeVisual() {
+    const mode = appState.settings.themeMode || 'auto';
+    const h = new Date().getHours();
+    const useLight = mode === 'light' || (mode === 'auto' && h >= 6 && h < 18);
+    document.body.classList.toggle('theme-light', useLight);
+  }
+
+  function computeCurrentFare() {
+    const s = appState.settings;
+    const m = appState.meter;
+    let fare = 0;
+    let totalSteps = 0;
+
+    if (s.billingMode === 'uber') {
+      const km = (m.distMeters || 0) / 1000;
+      const mins = (m.tripSeconds || 0) / 60;
+      const surge = Math.max(1, Number(s.uberSurge) || 1);
+      const rawTrip = ((Number(s.uberBase) || 48) + km * (Number(s.uberPerKm) || 25) + mins * (Number(s.uberPerMin) || 3.4)) * surge;
+      const minFare = Number(s.uberMin) || 85;
+      const serviceFee = Number(s.uberServiceFee) || 0;
+      fare = Math.round(Math.max(minFare, rawTrip) + serviceFee);
+      totalSteps = Math.max(0, Math.floor((fare - (minFare + serviceFee)) / 5));
+    } else {
+      fare = s.baseFare;
+      if (isNightHour()) fare += s.nightAdd;
+
+      let distSteps = 0;
+      if (m.distMeters > s.baseDist) {
+        distSteps = Math.floor((m.distMeters - s.baseDist) / s.stepDist) + 1;
+      }
+      const waitSteps = Math.floor(m.waitSeconds / s.waitSec);
+      totalSteps = distSteps + waitSteps;
+      fare += totalSteps * s.stepFare;
+    }
+
+    if (m.running && totalSteps > m.jumpCount) {
+      m.jumpCount = totalSteps;
+      playMeterSound('jump');
+    }
+
+    const autoEtag = Math.round(((m.highwayDistMeters || 0) / 1000) * ETAG_RATE_PER_KM);
+    const totalToll = autoEtag + (m.manualTollFee || 0);
+    m.tollFee = totalToll;
+
+    return { meterFare: fare, tollFee: totalToll, totalFare: fare + totalToll };
+  }
+
+  function refreshUI() {
+    const f = computeCurrentFare();
+    const s = appState.settings;
+    const m = appState.meter;
+
+    const rateTag = document.getElementById('ratePeriodTag');
+    const tariffLabel = document.getElementById('tariffTypeLabel');
+    if (s.billingMode === 'uber') {
+      const surge = Math.max(1, Number(s.uberSurge) || 1);
+      rateTag.innerHTML = '<span>🚗</span><span class="truncate">平台雙計制</span>';
+      rateTag.className = 'flex items-center gap-1.5 text-xs sm:text-sm font-black text-emerald-400 min-w-0 truncate';
+      tariffLabel.textContent = surge > 1 ? `雙計 ${surge.toFixed(1)}x 加成` : '平台雙計費率';
+    } else if (isNightHour() && s.nightAdd > 0) {
+      rateTag.innerHTML = '<span>🌙</span><span class="truncate">夜間加成費率</span>';
+      rateTag.className = 'flex items-center gap-1.5 text-xs sm:text-sm font-black text-amber-400 min-w-0 truncate';
+      tariffLabel.textContent = `夜間 +$${s.nightAdd}`;
+    } else {
+      rateTag.innerHTML = '<span>☀️</span><span class="truncate">日間費率</span>';
+      rateTag.className = 'flex items-center gap-1.5 text-xs sm:text-sm font-black text-sky-400 min-w-0 truncate';
+      tariffLabel.textContent = '標準起跳';
+    }
+
+    const pEmpty = document.getElementById('pillEmpty');
+    const pActive = document.getElementById('pillActive');
+    const pPaused = document.getElementById('pillPaused');
+    const basePill = 'px-2.5 py-1 rounded-xl text-xs font-black bg-[#1e293b] text-slate-400 border border-slate-700 whitespace-nowrap';
+    pEmpty.className = basePill;
+    pActive.className = basePill;
+    pPaused.className = basePill;
+
+    if (!m.running) {
+      pEmpty.className = 'px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-600 text-white border border-emerald-400 whitespace-nowrap shadow-sm';
+    } else if (m.paused) {
+      pPaused.className = 'px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 border border-amber-300 whitespace-nowrap shadow-sm';
+    } else {
+      pActive.className = 'px-2.5 py-1 rounded-xl text-xs font-black bg-rose-600 text-white border border-rose-400 whitespace-nowrap shadow-sm';
+    }
+
+    // 自動感應與道路按鈕狀態
+    const btnAuto = document.getElementById('btnAutoRoad');
+    const btnAutoLabel = document.getElementById('btnAutoRoadLabel');
+    btnAutoLabel.textContent = m.autoRoad ? '自動感應：開' : '手動切換：開';
+    btnAuto.className = m.autoRoad
+      ? 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-black bg-sky-950/90 text-sky-300 border border-sky-500/60 whitespace-nowrap shrink-0 active:scale-95'
+      : 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-black bg-amber-950/90 text-amber-300 border border-amber-500/60 whitespace-nowrap shrink-0 active:scale-95';
+
+    const btnLocal = document.getElementById('btnLocalRoad');
+    const btnHwy = document.getElementById('btnHighwayRoad');
+    const lockCls = m.autoRoad ? ' opacity-50 cursor-not-allowed pointer-events-none' : ' active:scale-95';
+    btnLocal.disabled = Boolean(m.autoRoad);
+    btnHwy.disabled = Boolean(m.autoRoad);
+    btnLocal.setAttribute('aria-disabled', m.autoRoad ? 'true' : 'false');
+    btnHwy.setAttribute('aria-disabled', m.autoRoad ? 'true' : 'false');
+    if (m.roadMode === 'local') {
+      btnLocal.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-sky-600 text-white border border-sky-400 shadow-md flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
+      btnHwy.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-[#1e293b] text-slate-300 border border-slate-700 flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
+    } else {
+      btnLocal.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-[#1e293b] text-slate-300 border border-slate-700 flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
+      btnHwy.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-sky-600 text-white border border-sky-400 shadow-md flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
+    }
+    const statusText = document.getElementById('autoRoadStatusText');
+    if (statusText) {
+      statusText.textContent = m.autoRoad
+        ? (m.roadMode === 'highway' ? '🚄 國道 1/3/5 號計費中' : '國道 1/3/5 號（自動鎖定）')
+        : (m.roadMode === 'highway' ? '手動：高速公路計 eTag' : '手動：一般道路模式');
+    }
+
+    // 金額與通行費
+    const fareAmtEl = document.getElementById('fareAmount');
+    if (fareAmtEl) fareAmtEl.textContent = f.totalFare;
+    const tollDispEl = document.getElementById('tollDisplayVal');
+    if (tollDispEl) tollDispEl.textContent = m.tollFee;
+    const hwyLabel = document.getElementById('hwyDistLabel');
+    if (hwyLabel) hwyLabel.textContent = `${((m.highwayDistMeters || 0) / 1000).toFixed(2)} km`;
+
+    // 里程 / 車速 / 延滯與雙進度條
+    document.getElementById('distValue').textContent = (m.distMeters / 1000).toFixed(2);
+    const hasTargetTrip = (m.targetTripMeters || 0) > 0;
+    const kmLbl = document.getElementById('kmProgressLabel');
+    if (kmLbl) kmLbl.textContent = hasTargetTrip ? '行程進度' : '每公里進度';
+    const kmPct = hasTargetTrip
+      ? Math.min(100, Math.round((m.distMeters / m.targetTripMeters) * 100))
+      : Math.round(((m.distMeters % 1000) / 1000) * 100);
+    const kmBar = document.getElementById('kmProgressBar');
+    const kmTxt = document.getElementById('kmPctText');
+    const kmCar = document.getElementById('kmCarIcon');
+    if (kmBar) kmBar.style.width = `${kmPct}%`;
+    if (kmTxt) kmTxt.textContent = `${kmPct}%`;
+    if (kmCar) kmCar.style.left = `${Math.min(96, Math.max(4, kmPct))}%`;
+
+    let distPct = m.distMeters <= s.baseDist
+      ? Math.min(100, Math.round((m.distMeters / s.baseDist) * 100))
+      : Math.round((((m.distMeters - s.baseDist) % s.stepDist) / s.stepDist) * 100);
+    document.getElementById('distProgressBar').style.width = `${distPct}%`;
+    document.getElementById('distPctText').textContent = `${distPct}%`;
+
+    document.getElementById('speedValue').textContent = Math.round(currentSpeedKmh);
+    const isUberMode = s.billingMode === 'uber';
+    const waitLabelEl = document.getElementById('waitLabelText');
+    if (waitLabelEl) {
+      waitLabelEl.textContent = isUberMode ? '行車計時' : '延滯計時';
+    }
+    const stepProgressSection = document.getElementById('taxiStepProgressSection');
+    if (stepProgressSection) {
+      stepProgressSection.classList.toggle('hidden', isUberMode);
+    }
+    const displaySeconds = isUberMode ? (m.tripSeconds || 0) : (m.waitSeconds || 0);
+    const mm = String(Math.floor(displaySeconds / 60)).padStart(2, '0');
+    const ss = String(Math.floor(displaySeconds % 60)).padStart(2, '0');
+    document.getElementById('waitValue').textContent = `${mm}:${ss}`;
+    const waitPct = Math.round(((m.waitSeconds % s.waitSec) / s.waitSec) * 100);
+    document.getElementById('waitProgressBar').style.width = `${waitPct}%`;
+    document.getElementById('waitPctText').textContent = `${waitPct}%`;
+
+    const currLabel = detectedRoadName || (lastSmoothPoint ? `${lastSmoothPoint.lat.toFixed(5)}, ${lastSmoothPoint.lon.toFixed(5)}` : '等待定位中...');
+    document.getElementById('meterCurrPosText').textContent = currLabel;
+    const startBoxVal = document.getElementById('inputStartAddr')?.value.trim();
+    document.getElementById('meterStartPosText').textContent = m.running
+      ? (m.tripStartAddr || startBoxVal || currLabel)
+      : (startBoxVal || m.tripStartAddr || currLabel);
+    const endBoxVal = document.getElementById('inputEndAddr')?.value.trim();
+    const endPosEl = document.getElementById('meterEndPosText');
+    if (endPosEl) {
+      endPosEl.textContent = endBoxVal || '尚未設定';
+    }
+
+    applyThemeVisual();
+
+    const btnStart = document.getElementById('btnStartTrip');
+    const activeCtrls = document.getElementById('activeTripControls');
+    const btnPause = document.getElementById('btnPauseTrip');
+    if (!m.running) {
+      btnStart.classList.remove('hidden');
+      activeCtrls.classList.add('hidden');
+    } else {
+      btnStart.classList.add('hidden');
+      activeCtrls.classList.remove('hidden');
+      btnPause.innerHTML = m.paused ? '<span>▶</span><span>繼續計費</span>' : '<span>⏸</span><span>暫停計費</span>';
+    }
+  }
+
+  // 常用地標膠囊渲染與長按刪除（支援簡稱＋完整地址）
+  function getLandmarkDisplayName(item) {
+    return typeof item === 'string' ? item : (item && item.name) || '';
+  }
+
+  function getLandmarkFullAddress(item) {
+    return typeof item === 'string' ? item : ((item && (item.addr || item.name)) || '');
+  }
+
+  function renderLandmarkChips() {
+    const box = document.getElementById('landmarkChipsContainer');
+    const toggleBtn = `
+      <button type="button" onclick="toggleFillTarget()" class="px-3 py-1.5 rounded-full bg-sky-600 text-white text-xs font-black flex items-center gap-1 shadow-sm active:scale-95">
+        <span>${fillTargetField === 'end' ? '選擇終點 ▾' : '選擇起點 ▾'}</span>
+      </button>
+    `;
+    const chips = appState.landmarks.map((item, idx) => {
+      const displayName = getLandmarkDisplayName(item);
+      return `
+      <button type="button"
+        onclick="applyLandmarkChip(${idx})"
+        onpointerdown="startLandmarkLongPress(${idx})"
+        onpointerup="cancelLandmarkLongPress()"
+        onpointerleave="cancelLandmarkLongPress()"
+        class="px-3.5 py-1.5 rounded-full bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-bold text-slate-200 transition active:scale-95">
+        ${esc(displayName)}
+      </button>
+    `;
+    }).join('');
+    const addBtn = `
+      <button type="button" onclick="openAddLandmarkModal()" class="px-3.5 py-1.5 rounded-full bg-emerald-200 hover:bg-emerald-300 text-emerald-950 text-xs font-black shadow-sm transition active:scale-95">
+        + 新增常用點
+      </button>
+    `;
+    box.innerHTML = toggleBtn + chips + addBtn;
+  }
+
+  function toggleFillTarget() {
+    fillTargetField = fillTargetField === 'end' ? 'start' : 'end';
+    renderLandmarkChips();
+    toast(fillTargetField === 'end' ? '點選地標將選擇「下車終點」' : '點選地標將選擇「上車起點」');
+  }
+
+  let longPressTimer = null;
+  let longPressTriggered = false;
+  function startLandmarkLongPress(idx) {
+    longPressTriggered = false;
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => {
+      longPressTriggered = true;
+      const name = getLandmarkDisplayName(appState.landmarks[idx]);
+      openConfirm(`確定要刪除常用點「${name}」嗎？`, () => {
+        appState.landmarks.splice(idx, 1);
+        saveAppState();
+        renderLandmarkChips();
+        toast(`已刪除常用點：${name}`);
+      });
+    }, 650);
+  }
+  function cancelLandmarkLongPress() {
+    clearTimeout(longPressTimer);
+  }
+
+  function applyLandmarkChip(idx) {
+    if (longPressTriggered) return;
+    const item = appState.landmarks[idx];
+    if (!item) return;
+    const displayName = getLandmarkDisplayName(item);
+    const fullAddr = getLandmarkFullAddress(item);
+    if (fillTargetField === 'end') {
+      document.getElementById('inputEndAddr').value = fullAddr;
+      refreshUI();
+      toast(`已選擇終點：${displayName}`);
+    } else {
+      boundStartGpsCoords = null;
+      document.getElementById('inputStartAddr').value = fullAddr;
+      refreshUI();
+      toast(`已選擇起點：${displayName}`);
+    }
+  }
+
+  function openAddLandmarkModal() {
+    const nameInp = document.getElementById('newLandmarkName');
+    const addrInp = document.getElementById('newLandmarkAddr');
+    nameInp.value = '';
+    addrInp.value = document.getElementById('inputEndAddr').value.trim() || '';
+    document.getElementById('addLandmarkModal').classList.remove('hidden');
+    setTimeout(() => nameInp.focus(), 50);
+  }
+
+  function saveNewLandmark() {
+    const cleanName = document.getElementById('newLandmarkName').value.trim();
+    const cleanAddr = document.getElementById('newLandmarkAddr').value.trim();
+    if (!cleanName && !cleanAddr) {
+      toast('請至少輸入顯示簡稱或完整地址');
+      return;
+    }
+    const finalName = cleanName || cleanAddr;
+    const finalAddr = cleanAddr || cleanName;
+    const existIdx = appState.landmarks.findIndex(x => getLandmarkDisplayName(x) === finalName);
+    if (existIdx >= 0) {
+      appState.landmarks[existIdx] = { name: finalName, addr: finalAddr };
+    } else {
+      appState.landmarks.push({ name: finalName, addr: finalAddr });
+    }
+    saveAppState();
+    renderLandmarkChips();
+    closeModal('addLandmarkModal');
+    toast(`已儲存常用點：${finalName}`);
+  }
+
+  function openCustomTollModal(target) {
+    openCustomInput('請輸入國道通行費金額（元）', 20, 'number', val => {
+      if (target === 'checkout') addCheckoutToll(val);
+    });
+  }
+
+  function toggleAutoRoad() {
+    appState.meter.autoRoad = !appState.meter.autoRoad;
+    appState.meter.manualLockUntil = 0;
+    if (appState.meter.autoRoad) {
+      appState.meter.roadMode = isOnTollFreeway135 ? 'highway' : 'local';
+    }
+    saveAppState();
+    refreshUI();
+    toast(appState.meter.autoRoad
+      ? `已切回「自動感應：開」（目前為${appState.meter.roadMode === 'highway' ? '高速公路' : '一般道路'}）`
+      : '已切為「手動切換：開」，可自由切換一般／高速公路');
+  }
+
+  function manualSetRoadMode(mode) {
+    if (appState.meter.autoRoad) {
+      toast('目前為「自動感應」模式，請先點上方切換為手動才能選擇道路');
+      return;
+    }
+    appState.meter.roadMode = mode;
+    appState.meter.manualLockUntil = 0;
+    saveAppState();
+    refreshUI();
+    toast(mode === 'highway' ? '已手動切換：高速公路（自動計 eTag）' : '已手動切換：一般道路');
+  }
+
+  function isPaidNationalFreeway135(roadStr) {
+    if (!roadStr) return false;
+    const s = roadStr.replace(/\s+/g, '');
+    if (/國道?[2468]號?|國道?10號?|台\d+/.test(s)) return false;
+    return /(國道?1號?|國道?3號?|國道?5號?|國1|國3|國5|中山高速公路|福爾摩沙高速公路|蔣渭水高速公路|五楊高架|汐五高架|雪山隧道|FreewayNo\.[135]|NationalHighway[135])/i.test(s);
+  }
+
+  async function reverseGeocodeLabel(lat, lon) {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=zh-TW`);
+      if (res.ok) {
+        const data = await res.json();
+        const addr = data.address || {};
+        const city = addr.city || addr.county || '';
+        const district = addr.suburb || addr.town || addr.city_district || '';
+        const road = addr.road || addr.highway || data.name || '';
+        const house = addr.house_number ? `${addr.house_number}號` : '';
+        const refTag = data.extratags?.ref || addr.state_district || '';
+        const roadCheckPool = [road, data.name, refTag, data.display_name].filter(Boolean).join(' ');
+        const hitFreeway = isPaidNationalFreeway135(roadCheckPool);
+        if (hitFreeway) {
+          isOnTollFreeway135 = true;
+          nonFreewayStreak = 0;
+        } else {
+          nonFreewayStreak += 1;
+          // 高架橋經過下方平面道路防抖：需連續 3 次偵測非國道且車速低於 65 km/h（真正下交流道）才切回一般道路
+          if (nonFreewayStreak >= 3 && currentSpeedKmh < 65) {
+            isOnTollFreeway135 = false;
+          }
+        }
+
+        const fullLabel = [city, district, road ? ` ${road}${house}` : ''].join('').trim();
+        if (fullLabel) return fullLabel;
+      }
+    } catch (e) {}
+
+    try {
+      const bRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh-Hant`);
+      if (bRes.ok) {
+        const bData = await bRes.json();
+        const city = bData.city || bData.principalSubdivision || '';
+        const locality = bData.locality || '';
+        const label = [city, locality].filter(Boolean).join('');
+        if (label) {
+          const hitFreeway = isPaidNationalFreeway135(label);
+          if (hitFreeway) {
+            isOnTollFreeway135 = true;
+            nonFreewayStreak = 0;
+          } else {
+            nonFreewayStreak += 1;
+            if (nonFreewayStreak >= 3 && currentSpeedKmh < 65) {
+              isOnTollFreeway135 = false;
+            }
+          }
+          return label;
+        }
+      }
+    } catch (e) {}
+
+    return '';
+  }
+
+  async function checkGeoRoad(lat, lon) {
+    const now = Date.now();
+    const intervalMs = (appState.meter.running || currentSpeedKmh >= 45) ? 5000 : 10000;
+    if (now - lastRoadQueryTs < intervalMs) return;
+    lastRoadQueryTs = now;
+    const fullLabel = await reverseGeocodeLabel(lat, lon);
+    if (fullLabel) {
+      detectedRoadName = fullLabel;
+      if (!appState.meter.running) {
+        appState.meter.tripStartAddr = fullLabel;
+      }
+      refreshUI();
+    }
+  }
+
+  function startTrip() {
+    unlockAndroidAudio();
+    const m = appState.meter;
+    m.running = true;
+    m.paused = false;
+    m.distMeters = 0;
+    m.highwayDistMeters = 0;
+    m.tripSeconds = 0;
+    m.waitSeconds = 0;
+    m.jumpCount = 0;
+    const now = new Date();
+    m.tripStartTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const startInput = document.getElementById('inputStartAddr').value.trim();
+    m.tripStartAddr = startInput || detectedRoadName || '現場上車';
+    lastSmoothPoint = null;
+    kalmanState = null;
+    gpsPoints = [];
+    saveAppState();
+    refreshUI();
+    playMeterSound('jump');
+    toast(appState.settings.billingMode === 'uber' ? '已開始載客（平台里程＋時間雙計）' : '已開始載客跳錶');
+  }
+
+  function togglePauseTrip() {
+    appState.meter.paused = !appState.meter.paused;
+    saveAppState();
+    refreshUI();
+    toast(appState.meter.paused ? '已暫停計費' : '已繼續計費');
+  }
+
+  function openCheckoutModal() {
+    const f = computeCurrentFare();
+    document.getElementById('chkMeterVal').textContent = f.meterFare;
+    document.getElementById('chkTollVal').textContent = f.tollFee;
+    document.getElementById('chkTotalVal').textContent = f.totalFare;
+    document.getElementById('chkFinalAmount').value = f.totalFare;
+    document.getElementById('checkoutModal').classList.remove('hidden');
+  }
+
+  function applyDiscount(type) {
+    const orig = Number(document.getElementById('chkTotalVal').textContent) || 0;
+    let val = orig;
+    if (type === 'round10') val = Math.floor(orig / 10) * 10;
+    else if (typeof type === 'number') val = Math.round(orig * type);
+    document.getElementById('chkFinalAmount').value = val;
+  }
+
+  function adjustCheckoutAmount(delta) {
+    const inp = document.getElementById('chkFinalAmount');
+    inp.value = Math.max(0, (Number(inp.value) || 0) + delta);
+  }
+
+  function addCheckoutToll(amt) {
+    appState.meter.manualTollFee = (appState.meter.manualTollFee || 0) + amt;
+    const f = computeCurrentFare();
+    document.getElementById('chkTollVal').textContent = f.tollFee;
+    document.getElementById('chkTotalVal').textContent = f.totalFare;
+    document.getElementById('chkFinalAmount').value = (Number(document.getElementById('chkFinalAmount').value) || 0) + amt;
+    refreshUI();
+  }
+
+  function resetCheckoutToll() {
+    const old = appState.meter.tollFee;
+    appState.meter.highwayDistMeters = 0;
+    appState.meter.manualTollFee = 0;
+    const f = computeCurrentFare();
+    document.getElementById('chkTollVal').textContent = 0;
+    document.getElementById('chkTotalVal').textContent = f.totalFare;
+    document.getElementById('chkFinalAmount').value = Math.max(0, (Number(document.getElementById('chkFinalAmount').value) || 0) - old);
+    refreshUI();
+  }
+
+  function confirmCheckout() {
+    const f = computeCurrentFare();
+    const finalAmt = Math.max(0, Math.round(Number(document.getElementById('chkFinalAmount').value) || f.totalFare));
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mi = String(now.getMinutes()).padStart(2, '0');
+    const endTimeStr = `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+
+    const rec = {
+      id: Date.now(),
+      startTime: appState.meter.tripStartTime || endTimeStr,
+      time: endTimeStr,
+      dateStr: `${yyyy}-${mm}-${dd}`,
+      monthStr: `${yyyy}-${mm}`,
+      yearStr: `${yyyy}`,
+      start: document.getElementById('inputStartAddr').value.trim() || appState.meter.tripStartAddr || '現場上車',
+      end: document.getElementById('inputEndAddr').value.trim() || detectedRoadName || '目的地',
+      distKm: Number((appState.meter.distMeters / 1000).toFixed(2)),
+      meterFare: f.meterFare,
+      tollFee: f.tollFee,
+      finalFare: finalAmt,
+      hiddenInHistory: false,
+      hiddenInReport: false
+    };
+    appState.records.unshift(rec);
+
+    appState.meter.running = false;
+    appState.meter.paused = false;
+    appState.meter.distMeters = 0;
+    appState.meter.highwayDistMeters = 0;
+    appState.meter.tripSeconds = 0;
+    appState.meter.waitSeconds = 0;
+    appState.meter.manualTollFee = 0;
+    appState.meter.tollFee = 0;
+    appState.meter.roadMode = 'local';
+    appState.meter.manualLockUntil = 0;
+    appState.meter.jumpCount = 0;
+    appState.meter.tripStartTime = '';
+    appState.meter.tripStartAddr = detectedRoadName || '';
+    appState.meter.targetTripMeters = 0;
+    lastSmoothPoint = null;
+    kalmanState = null;
+    gpsPoints = [];
+
+    saveAppState();
+    refreshUI();
+    closeModal('checkoutModal');
+    toast(`已結算實收 $${finalAmt}，延滯計時與跳錶已自動歸零`);
+
+    if (appState.settings.autoReceipt === 'on') {
+      openReceiptModal(rec);
+    }
+  }
+
+  let rawBtPayload = '';
+  function openReceiptModal(rec) {
+    const s = appState.settings;
+    const upTime = rec.startTime || rec.time;
+    const downTime = rec.time;
+    document.getElementById('receiptPrintArea').innerHTML = `
+      <div style="text-align:center; font-weight:900; font-size:14px;">${esc(s.fleet)}</div>
+      <div style="text-align:center; font-size:11px; margin-bottom:4px;">乘車收據明細</div>
+      <div style="border-top:1px dashed #000; margin:4px 0;"></div>
+      <div style="display:flex; justify-content:space-between;"><span>車號：</span><span>${esc(s.plate)}</span></div>
+      <div style="display:flex; justify-content:space-between;"><span>上車：</span><span>${esc(upTime)}</span></div>
+      <div style="display:flex; justify-content:space-between;"><span>下車：</span><span>${esc(downTime)}</span></div>
+      <div style="margin-top:2px;"><span>起點：</span><span>${esc(rec.start)}</span></div>
+      <div><span>終點：</span><span>${esc(rec.end)}</span></div>
+      <div style="display:flex; justify-content:space-between;"><span>里程：</span><span>${rec.distKm.toFixed(2)} km</span></div>
+      <div style="border-top:1px dashed #000; margin:4px 0;"></div>
+      <div style="display:flex; justify-content:space-between;"><span>跳錶車資：</span><span>$${rec.meterFare}</span></div>
+      ${rec.tollFee > 0 ? `<div style="display:flex; justify-content:space-between;"><span>國道通行費：</span><span>$${rec.tollFee}</span></div>` : ''}
+      <div style="display:flex; justify-content:space-between; font-weight:900; font-size:13px; margin-top:4px;">
+        <span>實收車資：</span><span>NT$ ${rec.finalFare}</span>
+      </div>
+      <div style="border-top:1px dashed #000; margin:4px 0;"></div>
+      <div style="text-align:center; font-size:10px;">${esc(s.driver)}</div>
+      <div style="text-align:center; font-size:10px;">謝謝搭乘，祝您旅途愉快！</div>
+    `;
+    rawBtPayload =
+      `${s.fleet}\n乘車收據明細\n--------------------------------\n` +
+      `車號：${s.plate}\n上車：${upTime}\n下車：${downTime}\n起點：${rec.start}\n終點：${rec.end}\n里程：${rec.distKm.toFixed(2)} km\n` +
+      `--------------------------------\n跳錶車資：$${rec.meterFare}\n` +
+      (rec.tollFee > 0 ? `國道通行費：$${rec.tollFee}\n` : '') +
+      `實收車資：NT$ ${rec.finalFare}\n--------------------------------\n${s.driver}\n謝謝搭乘，祝您旅途愉快！\n\n\n`;
+    document.getElementById('receiptModal').classList.remove('hidden');
+  }
+
+  function printRawBT() {
+    window.location.href = `rawbt:${encodeURIComponent(rawBtPayload)}`;
+  }
+
+  function openHistoryModal() {
+    renderHistoryList();
+    document.getElementById('historyModal').classList.remove('hidden');
+  }
+
+  function renderHistoryList() {
+    const items = appState.records.filter(r => !r.hiddenInHistory);
+    const box = document.getElementById('historyListContainer');
+    if (items.length === 0) {
+      box.innerHTML = '<div class="text-center text-xs text-slate-400 py-8">目前尚無行程紀錄</div>';
+      return;
+    }
+    box.innerHTML = items.map(r => `
+      <div class="p-3 rounded-2xl bg-[#0d1424] border border-slate-700/80 text-xs space-y-1.5">
+        <div class="flex justify-between items-start font-black gap-2">
+          <div class="space-y-0.5 text-[11px] text-slate-300">
+            <div>🕒 上車：${esc(r.startTime || r.time)}</div>
+            <div>🏁 下車：${esc(r.time)}</div>
+          </div>
+          <span class="text-amber-400 text-sm shrink-0">實收 $${r.finalFare}</span>
+        </div>
+        <div class="text-slate-200 space-y-0.5 pt-0.5">
+          <div><span class="text-emerald-400 font-bold">🟢 起點：</span>${esc(r.start)}</div>
+          <div><span class="text-rose-400 font-bold">🔴 終點：</span>${esc(r.end)}</div>
+        </div>
+        <div class="text-[11px] text-slate-400">
+          里程：${r.distKm.toFixed(2)} km${r.tollFee > 0 ? `・國道 $${r.tollFee}` : ''}
+        </div>
+        <div class="flex gap-1.5 pt-1">
+          <button type="button" onclick="reprintRecord(${r.id})" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-600 font-bold text-slate-200">🖨️ 重印</button>
+          <button type="button" onclick="editRecordFare(${r.id})" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-600 font-bold text-slate-200">✏️ 修改</button>
+          <button type="button" onclick="removeHistoryRecord(${r.id})" class="px-2.5 py-1 rounded-lg bg-rose-950/70 text-rose-300 border border-rose-700/50 font-bold">🗑️ 移除</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function reprintRecord(id) {
+    const r = appState.records.find(x => x.id === id);
+    if (r) openReceiptModal(r);
+  }
+
+  function editRecordFare(id) {
+    const r = appState.records.find(x => x.id === id);
+    if (!r) return;
+    openCustomInput('修改實收車資金額（元）', r.finalFare, 'number', val => {
+      r.finalFare = val;
+      saveAppState();
+      renderHistoryList();
+      toast('已更新實收金額');
+    });
+  }
+
+  function removeHistoryRecord(id) {
+    const r = appState.records.find(x => x.id === id);
+    if (r) {
+      r.hiddenInHistory = true;
+      saveAppState();
+      renderHistoryList();
+      toast('已從紀錄清單移除（報表統計保留）');
+    }
+  }
+
+  function clearHistoryListOnly() {
+    openConfirm('確定要清空「行程紀錄清單」嗎？\n（「📊 報表」裡的營收統計數據仍會完整保留，不會被清除）', () => {
+      appState.records = appState.records.map(r => ({
+        ...r,
+        hiddenInHistory: true,
+        hiddenInReport: Boolean(r.hiddenInReport)
+      }));
+      saveAppState();
+      renderHistoryList();
+      if (!document.getElementById('reportModal').classList.contains('hidden')) {
+        renderReportView();
+      }
+      toast('已清空行程紀錄清單（報表數據已保留）');
+    });
+  }
+
+  let repPeriod = 'day';
+  let repOffset = 0;
+  let reportDetailExpanded = false;
+
+  function openReportModal() {
+    repPeriod = 'day';
+    repOffset = 0;
+    reportDetailExpanded = false;
+    renderReportView();
+    document.getElementById('reportModal').classList.remove('hidden');
+  }
+
+  function switchReportPeriod(p) {
+    repPeriod = p;
+    repOffset = 0;
+    ['day', 'month', 'year'].forEach(k => {
+      const btn = document.getElementById('tabReport' + k.charAt(0).toUpperCase() + k.slice(1));
+      btn.className = k === p
+        ? 'py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black'
+        : 'py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-black';
+    });
+    renderReportView();
+  }
+
+  function moveReportOffset(delta) {
+    repOffset += delta;
+    renderReportView();
+  }
+
+  function getReportKey() {
+    const d = new Date();
+    if (repPeriod === 'day') {
+      d.setDate(d.getDate() + repOffset);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    } else if (repPeriod === 'month') {
+      d.setMonth(d.getMonth() + repOffset);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    } else {
+      d.setFullYear(d.getFullYear() + repOffset);
+      return `${d.getFullYear()}`;
+    }
+  }
+
+  function renderReportView() {
+    const key = getReportKey();
+    document.getElementById('reportPeriodTitle').textContent = key;
+    const list = appState.records.filter(r => !r.hiddenInReport && (
+      repPeriod === 'day' ? r.dateStr === key : repPeriod === 'month' ? r.monthStr === key : r.yearStr === key
+    ));
+
+    const sumRev = list.reduce((s, r) => s + r.finalFare, 0);
+    const sumDist = list.reduce((s, r) => s + r.distKm, 0);
+    const sumToll = list.reduce((s, r) => s + (r.tollFee || 0), 0);
+
+    const detailRowsHtml = list.length === 0
+      ? '<div class="text-center text-[11px] text-slate-400 py-3">本期尚無載客明細</div>'
+      : list.map((r, idx) => `
+        <div class="p-2.5 rounded-xl bg-[#151e32] border border-slate-700/70 space-y-1">
+          <div class="flex items-center justify-between text-[11px] font-black">
+            <span class="text-sky-400">#${idx + 1}・🕒 ${esc(r.time)}</span>
+            <span class="mono text-amber-400">實收 $${r.finalFare}</span>
+          </div>
+          <div class="text-[11px] text-slate-200 leading-snug">
+            <div><span class="text-emerald-400 font-bold">🟢 上車：</span>${esc(r.start)}</div>
+            <div><span class="text-rose-400 font-bold">🔴 下車：</span>${esc(r.end)}</div>
+          </div>
+          <div class="text-[10px] text-slate-400 flex items-center justify-between gap-2 pt-1 border-t border-slate-700/50">
+            <span>里程 ${r.distKm.toFixed(2)} km${r.tollFee > 0 ? `・國道 $${r.tollFee}` : ''}</span>
+            <button type="button" onclick="deleteSingleReportRecord(${r.id})" class="px-2 py-0.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 font-bold active:scale-95">
+              🗑️ 刪除
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+    document.getElementById('reportContentArea').innerHTML = `
+      <div class="grid grid-cols-3 gap-2">
+        <div class="bg-[#0d1424] rounded-2xl p-2.5 text-center border border-slate-700/70">
+          <div class="text-[11px] font-bold text-slate-400">總營業額</div>
+          <div class="mono text-base font-black text-amber-400 mt-0.5">$${sumRev}</div>
+        </div>
+        <button type="button" onclick="toggleReportTripsDetail()" class="bg-[#0d1424] hover:bg-slate-800/80 rounded-2xl p-2.5 text-center border border-sky-500/50 shadow-sm transition active:scale-95">
+          <div class="text-[11px] font-bold text-sky-300">載客趟數 ▾</div>
+          <div class="mono text-base font-black text-sky-400 mt-0.5">${list.length} 趟</div>
+          <div class="text-[9px] text-slate-400 mt-0.5">點此看明細</div>
+        </button>
+        <div class="bg-[#0d1424] rounded-2xl p-2.5 text-center border border-slate-700/70">
+          <div class="text-[11px] font-bold text-slate-400">總里程</div>
+          <div class="mono text-base font-black text-emerald-400 mt-0.5">${sumDist.toFixed(1)} km</div>
+        </div>
+      </div>
+      <div class="text-xs text-slate-300 bg-[#0d1424] rounded-xl p-2.5 font-semibold border border-slate-700/70">
+        內含國道通行費：$${sumToll}｜平均每趟車資：$${list.length ? Math.round(sumRev / list.length) : 0}
+      </div>
+      <div id="reportTripsDetailBox" class="${reportDetailExpanded ? '' : 'hidden'} bg-[#0d1424] rounded-2xl p-2.5 border border-sky-500/40 space-y-2">
+        <div class="flex items-center justify-between text-xs font-black text-sky-400 pb-1 border-b border-slate-700/70">
+          <span>📋 本期載客詳細明細（共 ${list.length} 趟）</span>
+          <button type="button" onclick="toggleReportTripsDetail()" class="text-[11px] text-slate-400">收合 ▴</button>
+        </div>
+        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
+          ${detailRowsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function deleteSingleReportRecord(id) {
+    const r = appState.records.find(x => x.id === id);
+    if (!r) return;
+    openConfirm(`確定要從報表中刪除這筆載客明細嗎？\n（${r.time}・實收 $${r.finalFare}）`, () => {
+      r.hiddenInReport = true;
+      saveAppState();
+      renderReportView();
+      toast('已從報表刪除該筆明細');
+    });
+  }
+
+  function toggleReportTripsDetail() {
+    reportDetailExpanded = !reportDetailExpanded;
+    const box = document.getElementById('reportTripsDetailBox');
+    if (box) box.classList.toggle('hidden', !reportDetailExpanded);
+  }
+
+  function exportReportCSV() {
+    const key = getReportKey();
+    const list = appState.records.filter(r => !r.hiddenInReport && (
+      repPeriod === 'day' ? r.dateStr === key : repPeriod === 'month' ? r.monthStr === key : r.yearStr === key
+    ));
+    let csv = '\uFEFF日期時間,月份,起點,終點,里程(km),跳錶車資,國道通行費,實收金額\n';
+    let sDist = 0, sMeter = 0, sToll = 0, sFinal = 0;
+    list.forEach(r => {
+      const [y, m] = r.monthStr.split('-');
+      csv += `"${r.time}","${y}年${m}月","${r.start}","${r.end}",${r.distKm.toFixed(2)},${r.meterFare},${r.tollFee || 0},${r.finalFare}\n`;
+      sDist += r.distKm; sMeter += r.meterFare; sToll += (r.tollFee || 0); sFinal += r.finalFare;
+    });
+    csv += `"合計","","","","${sDist.toFixed(2)}",${sMeter},${sToll},${sFinal}\n`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `計程助手報表_${key.replace(/-/g, '')}.csv`;
+    a.click();
+  }
+
+  function printShiftReceipt() {
+    const key = getReportKey();
+    const list = appState.records.filter(r => !r.hiddenInReport && (
+      repPeriod === 'day' ? r.dateStr === key : repPeriod === 'month' ? r.monthStr === key : r.yearStr === key
+    ));
+    const sumRev = list.reduce((s, r) => s + r.finalFare, 0);
+    const sumDist = list.reduce((s, r) => s + r.distKm, 0);
+    openReceiptModal({
+      time: `${key} 交班統計`,
+      start: `載客 ${list.length} 趟`,
+      end: `里程 ${sumDist.toFixed(1)} km`,
+      distKm: sumDist,
+      meterFare: sumRev,
+      tollFee: 0,
+      finalFare: sumRev
+    });
+  }
+
+  function clearReportStatsOnly() {
+    openConfirm('確定要歸零「營運報表統計數據」嗎？\n（「📋 紀錄」裡的歷史收據明細仍會完整保留，不會被清除）', () => {
+      appState.records = appState.records.map(r => ({
+        ...r,
+        hiddenInHistory: Boolean(r.hiddenInHistory),
+        hiddenInReport: true
+      }));
+      saveAppState();
+      renderReportView();
+      if (!document.getElementById('historyModal').classList.contains('hidden')) {
+        renderHistoryList();
+      }
+      toast('已清除報表統計數據（紀錄明細已保留）');
+    });
+  }
+
+  function renderSegmentedGroup(containerId, activeVal, activeClass) {
+    const box = document.getElementById(containerId);
+    if (!box) return;
+    const inactiveClass = 'bg-[#151e32] text-slate-300 border-slate-700 hover:bg-slate-800';
+    const managedClasses = ['bg-sky-600', 'bg-amber-400', 'bg-emerald-600', 'bg-[#151e32]', 'bg-slate-800', 'text-white', 'text-slate-950', 'text-slate-300', 'border-sky-400', 'border-amber-300', 'border-emerald-400', 'border-slate-700', 'hover:bg-slate-800', 'shadow-sm'];
+    box.querySelectorAll('button[data-val]').forEach(btn => {
+      const isActive = btn.dataset.val === activeVal;
+      const baseClasses = btn.className.split(/\s+/).filter(c => c && !managedClasses.includes(c));
+      btn.className = [...baseClasses, ...(isActive ? activeClass.split(/\s+/) : inactiveClass.split(/\s+/))].join(' ');
+    });
+  }
+
+  function syncSettingsSegmentedUI() {
+    const s = appState.settings;
+    renderSegmentedGroup('segBillingMode', s.billingMode || 'taxi', 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm');
+    renderSegmentedGroup('segThemeMode', s.themeMode || 'auto', 'bg-sky-600 text-white border-sky-400 shadow-sm');
+    renderSegmentedGroup('segSound', s.sound || 'on', 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm');
+    renderSegmentedGroup('segNightMode', s.nightMode || 'auto', 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm');
+    renderSegmentedGroup('segAutoReceipt', s.autoReceipt || 'on', 'bg-emerald-600 text-white border-emerald-400 shadow-sm');
+    const isUber = (s.billingMode || 'taxi') === 'uber';
+    const taxiFields = document.getElementById('taxiRateFields');
+    const uberFields = document.getElementById('uberRateFields');
+    if (taxiFields) taxiFields.classList.toggle('hidden', isUber);
+    if (uberFields) uberFields.classList.toggle('hidden', !isUber);
+  }
+
+  function selectBillingMode(val) {
+    appState.settings.billingMode = val;
+    syncSettingsSegmentedUI();
+    saveSettings();
+    toast(val === 'uber' ? '已切換為「平台里程＋時間雙計制」' : '已切換為「傳統計程車跳錶制」');
+  }
+
+  function selectThemeMode(val) {
+    appState.settings.themeMode = val;
+    syncSettingsSegmentedUI();
+    saveSettings();
+  }
+
+  function selectSoundMode(val) {
+    appState.settings.sound = val;
+    syncSettingsSegmentedUI();
+    onSoundSettingChange();
+  }
+
+  function selectNightMode(val) {
+    appState.settings.nightMode = val;
+    syncSettingsSegmentedUI();
+    saveSettings();
+  }
+
+  function selectAutoReceipt(val) {
+    appState.settings.autoReceipt = val;
+    syncSettingsSegmentedUI();
+    onReceiptSettingChange();
+  }
+
+  function openSettingsModal() {
+    const s = appState.settings;
+    document.getElementById('setUberBase').value = s.uberBase ?? 48;
+    document.getElementById('setUberMin').value = s.uberMin ?? 85;
+    document.getElementById('setUberPerKm').value = s.uberPerKm ?? 25;
+    document.getElementById('setUberPerMin').value = s.uberPerMin ?? 3.4;
+    document.getElementById('setUberServiceFee').value = s.uberServiceFee ?? 10;
+    document.getElementById('setUberSurge').value = s.uberSurge ?? 1.0;
+    document.getElementById('setBaseFare').value = s.baseFare;
+    document.getElementById('setBaseDist').value = s.baseDist;
+    document.getElementById('setStepDist').value = s.stepDist;
+    document.getElementById('setStepFare').value = s.stepFare;
+    document.getElementById('setWaitSec').value = s.waitSec;
+    document.getElementById('setWaitFare').value = s.waitFare;
+    document.getElementById('setNightAdd').value = s.nightAdd;
+    document.getElementById('setFleet').value = s.fleet;
+    document.getElementById('setPlate').value = s.plate;
+    document.getElementById('setDriver').value = s.driver;
+    syncSettingsSegmentedUI();
+    syncReceiptFieldsVisibility();
+    document.getElementById('settingsModal').classList.remove('hidden');
+  }
+
+  function syncReceiptFieldsVisibility() {
+    const autoOn = appState.settings.autoReceipt === 'on';
+    document.getElementById('receiptInfoFields').classList.toggle('hidden', !autoOn);
+    document.getElementById('receiptInfoHint').classList.toggle('hidden', autoOn);
+  }
+
+  function onReceiptSettingChange() {
+    syncReceiptFieldsVisibility();
+    saveSettings();
+  }
+
+  function saveSettings() {
+    const s = appState.settings;
+    s.uberBase = Math.max(0, Number(document.getElementById('setUberBase').value) || 0);
+    s.uberMin = Math.max(0, Number(document.getElementById('setUberMin').value) || 0);
+    s.uberPerKm = Math.max(0, Number(document.getElementById('setUberPerKm').value) || 0);
+    s.uberPerMin = Math.max(0, Number(document.getElementById('setUberPerMin').value) || 0);
+    s.uberServiceFee = Math.max(0, Number(document.getElementById('setUberServiceFee').value) || 0);
+    s.uberSurge = Math.max(1, Number(document.getElementById('setUberSurge').value) || 1);
+    s.baseFare = Math.max(0, Number(document.getElementById('setBaseFare').value) || 85);
+    s.baseDist = Math.max(100, Number(document.getElementById('setBaseDist').value) || 1250);
+    s.stepDist = Math.max(50, Number(document.getElementById('setStepDist').value) || 200);
+    s.stepFare = Math.max(1, Number(document.getElementById('setStepFare').value) || 5);
+    s.waitSec = Math.max(10, Number(document.getElementById('setWaitSec').value) || 60);
+    s.waitFare = Math.max(1, Number(document.getElementById('setWaitFare').value) || 5);
+    s.nightAdd = Math.max(0, Number(document.getElementById('setNightAdd').value) || 0);
+    s.fleet = document.getElementById('setFleet').value.trim() || '計程助手車隊';
+    s.plate = document.getElementById('setPlate').value.trim() || 'TDX-8888';
+    s.driver = document.getElementById('setDriver').value.trim() || '';
+    saveAppState();
+    refreshUI();
+  }
+
+  function confirmAndCloseSettings() {
+    saveSettings();
+    closeModal('settingsModal');
+    toast('✅ 設定已儲存並套用');
+  }
+
+  function onSoundSettingChange() {
+    saveSettings();
+    if (appState.settings.sound === 'on') {
+      playMeterSound('jump');
+      toast('已開啟跳錶提示音效（85% 音量）');
+    } else {
+      if (keepAliveAudioEl && !keepAliveAudioEl.paused) keepAliveAudioEl.pause();
+      toast('已關閉跳錶提示音效');
+    }
+  }
+
+  function exportBackupJson() {
+    const d = new Date();
+    const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' }));
+    a.download = `計程助手備份_${ymd}.json`;
+    a.click();
+    toast(`已匯出 計程助手備份_${ymd}.json`);
+  }
+
+  function importBackupJson(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.settings) appState.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+        if (Array.isArray(data.landmarks)) appState.landmarks = data.landmarks;
+        if (Array.isArray(data.records)) appState.records = data.records;
+        saveAppState();
+        renderLandmarkChips();
+        refreshUI();
+        toast('備份資料還原成功！');
+      } catch (err) {
+        toast('備份檔格式錯誤');
+      }
+    };
+    reader.readAsText(f);
+  }
+
+  function onStartAddrManualInput() {
+    boundStartGpsCoords = null;
+    refreshUI();
+  }
+
+  function swapStartEndAddr() {
+    const sInp = document.getElementById('inputStartAddr');
+    const eInp = document.getElementById('inputEndAddr');
+    const tmp = sInp.value;
+    sInp.value = eInp.value;
+    eInp.value = tmp;
+    boundStartGpsCoords = null;
+    refreshUI();
+    toast('已互換起點與終點');
+  }
+
+  function clearRouteInputs() {
+    const endInp = document.getElementById('inputEndAddr');
+    if (endInp) {
+      endInp.value = '';
+      endInp.defaultValue = '';
+      endInp.focus();
+    }
+    const resBox = document.getElementById('estimateResultBox');
+    if (resBox) resBox.classList.add('hidden');
+    appState.meter.targetTripMeters = 0;
+    saveAppState();
+    refreshUI();
+    const fb = document.getElementById('navLaunchFallbackBox');
+    if (fb) fb.classList.add('hidden');
+    toast('已清空終點地址');
+  }
+
+  async function fillCurrentLocation() {
+    const startInp = document.getElementById('inputStartAddr');
+    if (lastSmoothPoint) {
+      boundStartGpsCoords = { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon };
+      if (detectedRoadName) {
+        startInp.value = detectedRoadName;
+        refreshUI();
+        toast('已帶入目前定位地址');
+        return;
+      }
+      toast('正在反查目前道路地址...');
+      const label = await reverseGeocodeLabel(lastSmoothPoint.lat, lastSmoothPoint.lon);
+      if (label) {
+        detectedRoadName = label;
+        startInp.value = label;
+        refreshUI();
+        toast('已帶入目前定位地址');
+      } else {
+        startInp.value = `${lastSmoothPoint.lat.toFixed(5)}, ${lastSmoothPoint.lon.toFixed(5)}`;
+        refreshUI();
+        toast('網路無法反查路名，已帶入 GPS 座標');
+      }
+    } else if ('geolocation' in navigator) {
+      toast('正在取得目前位置...');
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        lastSmoothPoint = { lat, lon, ts: Date.now() };
+        boundStartGpsCoords = { lat, lon };
+        const label = await reverseGeocodeLabel(lat, lon);
+        if (label) {
+          detectedRoadName = label;
+          startInp.value = label;
+          refreshUI();
+          toast('已帶入目前定位地址');
+        } else {
+          startInp.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+          refreshUI();
+          toast('已帶入目前 GPS 座標');
+        }
+      }, () => toast('無法取得定位，請手動輸入起點'));
+    } else {
+      toast('尚未取得定位座標，請稍候');
+    }
+  }
+
+  async function geocodeAddress(query) {
+    const raw = String(query || '').trim();
+    if (!raw) return null;
+
+    const atMatch = raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const qCoordMatch = raw.match(/[?&](?:q|query|ll|destination)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const plainCoordMatch = raw.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+    const pickedCoord = atMatch || qCoordMatch || plainCoordMatch;
+    if (pickedCoord) {
+      return {
+        lat: Number(pickedCoord[1]),
+        lon: Number(pickedCoord[2]),
+        label: raw.startsWith('http') ? `${Number(pickedCoord[1]).toFixed(5)}, ${Number(pickedCoord[2]).toFixed(5)}` : raw
+      };
+    }
+
+    const knownPlaces = [
+      { keys: ['納智捷土城廠', 'LUXGEN土城', '納智捷土城'], lat: 24.9852, lon: 121.4519, label: '納智捷土城廠' },
+      { keys: ['三峽老街', '三峽祖師廟', '三峽區', '三峽'], lat: 24.9333, lon: 121.3694, label: '三峽老街' },
+      { keys: ['板橋車站', '板橋火車站', '板橋高鐵', '板橋轉運站', '板橋'], lat: 25.0143, lon: 121.4638, label: '板橋車站' },
+      { keys: ['桃園國際機場第一航廈', '桃園機場第一航廈', '桃機一航', '第一航廈'], lat: 25.0777, lon: 121.2328, label: '桃園國際機場第一航廈' },
+      { keys: ['桃園國際機場第二航廈', '桃園機場第二航廈', '桃機二航', '第二航廈', '桃園機場', '桃機'], lat: 25.0806, lon: 121.2407, label: '桃園國際機場第二航廈' },
+      { keys: ['高鐵雲林站', '雲林高鐵', '高鐵雲林', '虎尾高鐵'], lat: 23.7364, lon: 120.4158, label: '高鐵雲林站' },
+      { keys: ['高鐵台中站', '台中高鐵', '新烏日', '高鐵台中', '烏日高鐵'], lat: 24.1124, lon: 120.6152, label: '高鐵台中站' },
+      { keys: ['高鐵左營站', '左營高鐵', '新左營', '高鐵左營'], lat: 22.6873, lon: 120.3077, label: '高鐵左營站' },
+      { keys: ['高鐵桃園站', '桃園高鐵', '青埔高鐵'], lat: 25.0126, lon: 121.2143, label: '高鐵桃園站' },
+      { keys: ['高鐵新竹站', '新竹高鐵', '六家高鐵'], lat: 24.8081, lon: 121.0402, label: '高鐵新竹站' },
+      { keys: ['高鐵苗栗站', '苗栗高鐵', '後龍高鐵'], lat: 24.6062, lon: 120.8245, label: '高鐵苗栗站' },
+      { keys: ['高鐵彰化站', '彰化高鐵', '田中高鐵'], lat: 23.8744, lon: 120.5758, label: '高鐵彰化站' },
+      { keys: ['高鐵嘉義站', '嘉義高鐵', '太保高鐵'], lat: 23.4593, lon: 120.3233, label: '高鐵嘉義站' },
+      { keys: ['高鐵台南站', '台南高鐵', '沙崙高鐵'], lat: 22.9244, lon: 120.2856, label: '高鐵台南站' },
+      { keys: ['台北車站', '臺北車站', '台北火車站', '臺北火車站', '北車'], lat: 25.0478, lon: 121.5170, label: '台北車站' },
+      { keys: ['基隆車站', '基隆火車站'], lat: 25.1317, lon: 121.7393, label: '基隆車站' },
+      { keys: ['南港車站', '南港火車站', '高鐵南港站'], lat: 25.0531, lon: 121.6070, label: '南港車站' },
+      { keys: ['松山車站', '松山火車站'], lat: 25.0497, lon: 121.5777, label: '松山車站' },
+      { keys: ['樹林車站', '樹林火車站'], lat: 24.9912, lon: 121.4244, label: '樹林車站' },
+      { keys: ['鶯歌車站', '鶯歌火車站'], lat: 24.9547, lon: 121.3551, label: '鶯歌車站' },
+      { keys: ['桃園車站', '桃園火車站'], lat: 24.9892, lon: 121.3135, label: '桃園車站' },
+      { keys: ['中壢車站', '中壢火車站'], lat: 24.9537, lon: 121.2255, label: '中壢車站' },
+      { keys: ['新竹車站', '新竹火車站'], lat: 24.8016, lon: 120.9716, label: '新竹車站' },
+      { keys: ['苗栗車站', '苗栗火車站'], lat: 24.5700, lon: 120.8224, label: '苗栗車站' },
+      { keys: ['豐原車站', '豐原火車站'], lat: 24.2542, lon: 120.7228, label: '豐原車站' },
+      { keys: ['台中車站', '臺中車站', '台中火車站', '臺中火車站'], lat: 24.1368, lon: 120.6850, label: '台中車站' },
+      { keys: ['彰化車站', '彰化火車站'], lat: 24.0816, lon: 120.5385, label: '彰化車站' },
+      { keys: ['員林車站', '員林火車站'], lat: 23.9594, lon: 120.5700, label: '員林車站' },
+      { keys: ['斗六車站', '斗六火車站'], lat: 23.7118, lon: 120.5411, label: '斗六車站' },
+      { keys: ['嘉義車站', '嘉義火車站'], lat: 23.4791, lon: 120.4412, label: '嘉義車站' },
+      { keys: ['新營車站', '新營火車站'], lat: 23.3067, lon: 120.3230, label: '新營車站' },
+      { keys: ['台南車站', '臺南車站', '台南火車站', '臺南火車站'], lat: 22.9971, lon: 120.2126, label: '台南車站' },
+      { keys: ['高雄車站', '高雄火車站'], lat: 22.6396, lon: 120.3021, label: '高雄車站' },
+      { keys: ['屏東車站', '屏東火車站'], lat: 22.6693, lon: 120.4862, label: '屏東車站' },
+      { keys: ['宜蘭車站', '宜蘭火車站'], lat: 24.7545, lon: 121.7582, label: '宜蘭車站' },
+      { keys: ['羅東車站', '羅東火車站'], lat: 24.6778, lon: 121.7746, label: '羅東車站' },
+      { keys: ['花蓮車站', '花蓮火車站'], lat: 23.9929, lon: 121.6011, label: '花蓮車站' },
+      { keys: ['台東車站', '臺東車站', '台東火車站', '臺東火車站'], lat: 22.7932, lon: 121.1232, label: '台東車站' },
+      { keys: ['松山機場', '臺北松山機場'], lat: 25.0631, lon: 121.5525, label: '松山機場' },
+      { keys: ['土城', '永寧'], lat: 24.9722, lon: 121.4433, label: '土城區' },
+      { keys: ['鶯歌', '鶯歌老街'], lat: 24.9554, lon: 121.3547, label: '鶯歌區' }
+    ];
+    const norm = raw.replace(/^台灣|^臺灣/, '').replace(/\s+/g, '');
+    const normStation = norm.replace(/火車站/g, '車站');
+    const hasSpecificStreetOrPoi = /([路街大道巷弄號]|一段|二段|三段|四段|五段|六段|醫院|學校|大學|公司|工廠|公園|市場|百貨|飯店|旅館)/.test(norm);
+    const exactKnown = knownPlaces.find(p => p.keys.some(k => norm === k || normStation === k || (norm.includes(k) && (k.length >= 4 || (!hasSpecificStreetOrPoi && norm.length <= 6)))));
+    if (exactKnown) {
+      return { lat: exactKnown.lat, lon: exactKnown.lon, label: raw };
+    }
+
+    const districtPrefixMap = [
+      { d: '三峽', full: '新北市三峽區' },
+      { d: '土城', full: '新北市土城區' },
+      { d: '板橋', full: '新北市板橋區' },
+      { d: '中和', full: '新北市中和區' },
+      { d: '永和', full: '新北市永和區' },
+      { d: '新店', full: '新北市新店區' },
+      { d: '樹林', full: '新北市樹林區' },
+      { d: '鶯歌', full: '新北市鶯歌區' },
+      { d: '新莊', full: '新北市新莊區' },
+      { d: '三重', full: '新北市三重區' },
+      { d: '蘆洲', full: '新北市蘆洲區' },
+      { d: '淡水', full: '新北市淡水區' },
+      { d: '汐止', full: '新北市汐止區' },
+      { d: '林口', full: '新北市林口區' },
+      { d: '五股', full: '新北市五股區' },
+      { d: '泰山', full: '新北市泰山區' }
+    ];
+    let expandedPrefixed = norm;
+    for (const item of districtPrefixMap) {
+      if (expandedPrefixed.startsWith(item.d) && !expandedPrefixed.startsWith(item.d + '區')) {
+        expandedPrefixed = item.full + expandedPrefixed.slice(item.d.length);
+        break;
+      }
+    }
+
+    const withRoadWord = expandedPrefixed.replace(/([^\d路街大道])([一二三四五六七八九十\d]+段)/g, '$1路$2');
+    const noDashHouse = withRoadWord.replace(/(\d+)(?:-|之)\d+號/g, '$1號');
+    const houseMatch = noDashHouse.match(/^(.*?)(\d+)號/);
+    const neighborHouses = [];
+    if (houseMatch) {
+      const prefix = houseMatch[1];
+      const num = parseInt(houseMatch[2], 10);
+      if (!isNaN(num) && num > 2) {
+        neighborHouses.push(`${prefix}${num - 2}號`, `${prefix}${num + 2}號`);
+      }
+    }
+    const strippedLaneHouse = noDashHouse
+      .replace(/(?:之\d+)?\d+(?:(?:-|之)\d+)?[號樓層F室]/g, '')
+      .replace(/\d+(?:(?:-|之)\d+)?弄/g, '')
+      .replace(/\d+(?:(?:-|之)\d+)?巷/g, '');
+    const strippedSection = strippedLaneHouse
+      .replace(/(?:一|二|三|四|五|六|七|八|九|十|[1-9]\d?)段/g, '');
+    const cityDistrictOnly = expandedPrefixed
+      .match(/^(?:台灣|臺灣)?(?:.{2,3}[市縣])(?:.{1,4}[區鄉鎮市])/)?.[0] || '';
+
+    const candidates = Array.from(new Set([
+      noDashHouse,
+      withRoadWord,
+      expandedPrefixed,
+      raw,
+      norm,
+      noDashHouse.replace(/台/g, '臺'),
+      ...neighborHouses,
+      ...neighborHouses.map(h => h.replace(/台/g, '臺')),
+      raw.replace(/台/g, '臺'),
+      strippedLaneHouse,
+      strippedLaneHouse.replace(/台/g, '臺'),
+      strippedSection,
+      cityDistrictOnly,
+      cityDistrictOnly.replace(/台/g, '臺')
+    ].filter(q => q && q.length >= 2)));
+
+    for (const q of candidates) {
+      try {
+        const twUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&accept-language=zh-TW`;
+        const res = await fetch(twUrl, { headers: { 'Accept': 'application/json' } });
+        if (res.ok) {
+          const arr = await res.json();
+          if (Array.isArray(arr) && arr.length > 0) {
+            return { lat: Number(arr[0].lat), lon: Number(arr[0].lon), label: raw };
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const biasLat = lastSmoothPoint ? lastSmoothPoint.lat : 24.9333;
+        const biasLon = lastSmoothPoint ? lastSmoothPoint.lon : 121.3694;
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${biasLat}&lon=${biasLon}&limit=3`;
+        const pRes = await fetch(photonUrl);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          const feat = (pData.features || []).find(f => {
+            const c = (f.properties && f.properties.countrycode) || '';
+            return !c || c.toUpperCase() === 'TW';
+          }) || (pData.features && pData.features[0]);
+          if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
+            const [lon, lat] = feat.geometry.coordinates;
+            return { lat: Number(lat), lon: Number(lon), label: raw };
+          }
+        }
+      } catch (e) {}
+    }
+
+    const areaFallback = [
+      { keys: ['土城'], lat: 24.9722, lon: 121.4433 },
+      { keys: ['三峽'], lat: 24.9333, lon: 121.3694 },
+      { keys: ['鶯歌'], lat: 24.9554, lon: 121.3547 },
+      { keys: ['樹林'], lat: 24.9912, lon: 121.4205 },
+      { keys: ['麥寮'], lat: 23.7512, lon: 120.2534 },
+      { keys: ['虎尾'], lat: 23.7081, lon: 120.4375 },
+      { keys: ['斗六'], lat: 23.7092, lon: 120.5433 },
+      { keys: ['北港'], lat: 23.5678, lon: 120.3025 },
+      { keys: ['西螺'], lat: 23.7978, lon: 120.4639 },
+      { keys: ['台北', '臺北', '新北', '板橋', '中和', '永和', '新店', '淡水', '基隆'], lat: 25.0330, lon: 121.5654 },
+      { keys: ['桃園', '中壢', '青埔', '機場'], lat: 24.9936, lon: 121.3010 },
+      { keys: ['新竹', '竹北'], lat: 24.8138, lon: 120.9675 },
+      { keys: ['苗栗'], lat: 24.5602, lon: 120.8214 },
+      { keys: ['台中', '臺中', '烏日'], lat: 24.1477, lon: 120.6736 },
+      { keys: ['彰化', '員林', '田中'], lat: 24.0518, lon: 120.5161 },
+      { keys: ['雲林'], lat: 23.7092, lon: 120.5313 },
+      { keys: ['嘉義', '太保'], lat: 23.4801, lon: 120.4491 },
+      { keys: ['台南', '臺南', '永康', '歸仁'], lat: 22.9997, lon: 120.2270 },
+      { keys: ['高雄', '左營', '鳳山', '小港'], lat: 22.6273, lon: 120.3014 }
+    ];
+    const matchedArea = areaFallback.find(c => c.keys.some(k => norm.includes(k)));
+    if (matchedArea) {
+      return { lat: matchedArea.lat, lon: matchedArea.lon, label: raw };
+    }
+
+    return null;
+  }
+
+  async function estimateFare() {
+    const startVal = document.getElementById('inputStartAddr').value.trim();
+    const endVal = document.getElementById('inputEndAddr').value.trim();
+    const box = document.getElementById('estimateResultBox');
+    const btn = document.getElementById('btnCalcRoute');
+
+    if (!endVal) {
+      toast('請先輸入或點選「下車終點」');
+      document.getElementById('inputEndAddr').focus();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span><span>路線計算中...</span>';
+
+    try {
+      let startCoords = null;
+      if (boundStartGpsCoords && startVal) {
+        startCoords = { lat: boundStartGpsCoords.lat, lon: boundStartGpsCoords.lon, label: startVal };
+      } else if (startVal) {
+        startCoords = await geocodeAddress(startVal);
+      } else if (lastSmoothPoint) {
+        startCoords = { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon, label: detectedRoadName || '目前位置' };
+      } else {
+        startCoords = { lat: 24.9333, lon: 121.3694, label: detectedRoadName || '目前位置' };
+      }
+      const endCoords = await geocodeAddress(endVal);
+
+      if (!endCoords) {
+        toast('找不到終點位置，可貼上座標或直接按「導航並跳錶」');
+        return;
+      }
+
+      let km = 0;
+      let estMin = 0;
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?overview=false&alternatives=3&continue_straight=false`;
+        const rRes = await fetch(osrmUrl);
+        const rData = await rRes.json();
+        if (rData && rData.routes && rData.routes.length > 0) {
+          // 優先挑選「行車時間最快（或跨區長途時平均時速最高、走國道/快速道路）」的路線，更貼近 Google 導航實際路線
+          const straightKm = haversineMeters(startCoords.lat, startCoords.lon, endCoords.lat, endCoords.lon) / 1000;
+          const bestRoute = rData.routes.reduce((best, cur) => {
+            if (straightKm >= 8) {
+              const bestSpeed = best.distance / Math.max(1, best.duration);
+              const curSpeed = cur.distance / Math.max(1, cur.duration);
+              if (cur.duration <= best.duration * 1.08 && curSpeed > bestSpeed * 1.15) return cur;
+            }
+            return cur.duration < best.duration ? cur : best;
+          }, rData.routes[0]);
+          km = Number((bestRoute.distance / 1000).toFixed(1));
+          estMin = Math.max(1, Math.round(bestRoute.duration / 60));
+        }
+      } catch (routeErr) {}
+
+      if (!km || km <= 0) {
+        km = Number(((haversineMeters(startCoords.lat, startCoords.lon, endCoords.lat, endCoords.lon) / 1000) * 1.2).toFixed(1));
+        estMin = Math.max(1, Math.round(km * 1.5));
+      }
+
+      const s = appState.settings;
+      const meters = km * 1000;
+      appState.meter.targetTripMeters = meters;
+      saveAppState();
+      refreshUI();
+      let estMinFare = 0;
+      let estMaxFare = 0;
+      let modeNote = '';
+
+      if (s.billingMode === 'uber') {
+        const surge = Math.max(1, Number(s.uberSurge) || 1);
+        const uBase = Number(s.uberBase) || 48;
+        const uMin = Number(s.uberMin) || 85;
+        const uKm = Number(s.uberPerKm) || 25;
+        const uMinRate = Number(s.uberPerMin) || 3.4;
+        const uFee = Number(s.uberServiceFee) || 0;
+        const smoothTrip = (uBase + km * uKm + estMin * uMinRate) * surge;
+        estMinFare = Math.round(Math.max(uMin, smoothTrip) + uFee);
+        const trafficTrip = (uBase + km * uKm + (estMin * 1.25) * uMinRate) * surge;
+        const estEtagBuffer = km >= 8 ? Math.round(km * 0.65 * ETAG_RATE_PER_KM) : 0;
+        estMaxFare = Math.round(Math.max(uMin, trafficTrip) + uFee + estEtagBuffer);
+        modeNote = '※ 目前為【平台里程＋時間雙計制】試算（含基本費、里程、行車時間與處理費），高標含路況與國道 eTag 緩衝，實際收費以法定跳錶或雙方約定為準。';
+      } else {
+        estMinFare = s.baseFare + (isNightHour() ? s.nightAdd : 0);
+        if (meters > s.baseDist) {
+          estMinFare += (Math.floor((meters - s.baseDist) / s.stepDist) + 1) * s.stepFare;
+        }
+        const estWaitBuffer = Math.ceil((estMinFare * 0.18) / s.stepFare) * s.stepFare;
+        const estEtagBuffer = km >= 8 ? Math.round(km * 0.65 * ETAG_RATE_PER_KM) : 0;
+        estMaxFare = Math.max(estMinFare + s.stepFare, Math.round((estMinFare + estWaitBuffer + estEtagBuffer) / 5) * 5);
+        modeNote = '※ 低標為順暢純里程車資，高標已納入紅燈停等延滯與國道 eTag 緩衝估算，實際收費以法定跳錶或雙方約定為準。';
+      }
+
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <div class="space-y-1 pb-2 border-b border-slate-700/60">
+          <div class="flex items-start gap-1.5">
+            <span class="text-emerald-500 font-black whitespace-nowrap shrink-0">🟢 上車起點：</span>
+            <span class="text-slate-100 font-bold break-all">${esc(startCoords.label || startVal || '目前位置')}</span>
+          </div>
+          <div class="flex items-start gap-1.5">
+            <span class="text-rose-500 font-black whitespace-nowrap shrink-0">🔴 下車終點：</span>
+            <span class="text-slate-100 font-bold break-all">${esc(endCoords.label || endVal)}</span>
+          </div>
+        </div>
+        <div class="space-y-1.5 pt-1">
+          <div class="text-slate-300">預估里程 <strong class="text-sky-400">${km.toFixed(1)} km</strong>（約 ${estMin} 分）</div>
+          <div class="rounded-xl bg-[#151e32] border border-amber-400/40 px-3 py-2 flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-slate-300">預估車資</span>
+            <span class="text-sm sm:text-base font-black text-amber-400 text-right">NT$ ${estMinFare} 至 NT$ ${estMaxFare}</span>
+          </div>
+        </div>
+        <div class="text-[10px] text-slate-400 leading-relaxed">${modeNote}</div>
+      `;
+    } catch (e) {
+      toast('網路路線查詢失敗，請確認網路連線');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🔍</span><span>試算車資</span>';
+    }
+  }
+
+  async function openExternalNavigation(alsoStartMeter) {
+    const startVal = document.getElementById('inputStartAddr').value.trim();
+    const endVal = document.getElementById('inputEndAddr').value.trim();
+    if (!endVal) {
+      toast('請先輸入或點選「下車終點」再開啟導航');
+      document.getElementById('inputEndAddr').focus();
+      return;
+    }
+    if (alsoStartMeter && !appState.meter.running) {
+      startTrip();
+    }
+    const statusPillRow = document.getElementById('topStatusPillRow');
+    if (statusPillRow) {
+      const targetY = Math.max(0, statusPillRow.getBoundingClientRect().top + window.scrollY - 8);
+      window.scrollTo({ top: targetY, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    (async () => {
+      try {
+        const sc = (boundStartGpsCoords && startVal)
+          ? { lat: boundStartGpsCoords.lat, lon: boundStartGpsCoords.lon }
+          : (startVal
+            ? await geocodeAddress(startVal)
+            : (lastSmoothPoint ? { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon } : { lat: 24.9333, lon: 121.3694 }));
+        const ec = await geocodeAddress(endVal);
+        if (sc && ec) {
+          let routeMeters = 0;
+          try {
+            const rRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${sc.lon},${sc.lat};${ec.lon},${ec.lat}?overview=false&alternatives=3&continue_straight=false`);
+            const rData = await rRes.json();
+            if (rData && rData.routes && rData.routes.length > 0) {
+              const straightKm = haversineMeters(sc.lat, sc.lon, ec.lat, ec.lon) / 1000;
+              const bestRoute = rData.routes.reduce((best, cur) => {
+                if (straightKm >= 8) {
+                  const bestSpeed = best.distance / Math.max(1, best.duration);
+                  const curSpeed = cur.distance / Math.max(1, cur.duration);
+                  if (cur.duration <= best.duration * 1.08 && curSpeed > bestSpeed * 1.15) return cur;
+                }
+                return cur.duration < best.duration ? cur : best;
+              }, rData.routes[0]);
+              routeMeters = bestRoute.distance;
+            }
+          } catch (e) {}
+          if (!routeMeters || routeMeters <= 0) {
+            routeMeters = haversineMeters(sc.lat, sc.lon, ec.lat, ec.lon) * 1.2;
+          }
+          if (routeMeters > 0) {
+            appState.meter.targetTripMeters = Math.round(routeMeters);
+            saveAppState();
+            refreshUI();
+          }
+        }
+      } catch (e) {}
+    })();
+
+    const encodedDest = encodeURIComponent(endVal);
+    let queryParts = [`daddr=${encodedDest}`, 'dirflg=d'];
+    if (boundStartGpsCoords && startVal) {
+      queryParts.unshift(`saddr=${boundStartGpsCoords.lat.toFixed(6)},${boundStartGpsCoords.lon.toFixed(6)}`);
+    } else if (startVal) {
+      queryParts.unshift(`saddr=${encodeURIComponent(startVal)}`);
+    } else if (lastSmoothPoint) {
+      queryParts.unshift(`saddr=${lastSmoothPoint.lat.toFixed(6)},${lastSmoothPoint.lon.toFixed(6)}`);
+    }
+    const qStr = queryParts.join('&');
+    const url = `https://maps.google.com/maps?${qStr}`;
+    const androidIntentUrl = `intent://?q=${encodedDest}&mode=d#Intent;scheme=google.navigation;package=com.google.android.apps.maps;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    lastPreparedNavUrl = url;
+    const fbBox = document.getElementById('navLaunchFallbackBox');
+    const anchor = document.getElementById('navDirectAnchor');
+    if (anchor) {
+      anchor.href = isAndroid ? androidIntentUrl : url;
+      if (isAndroid) anchor.removeAttribute('target');
+      else anchor.setAttribute('target', '_blank');
+    }
+    if (fbBox) {
+      if (appState.settings.hideNavFallback) {
+        fbBox.classList.add('hidden');
+      } else {
+        fbBox.classList.remove('hidden');
+      }
+    }
+
+    if (isAndroid) {
+      const a = document.createElement('a');
+      a.href = androidIntentUrl;
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+
+  let lastPreparedNavUrl = '';
+  function dismissNavFallbackForever() {
+    appState.settings.hideNavFallback = true;
+    saveAppState();
+    const fbBox = document.getElementById('navLaunchFallbackBox');
+    if (fbBox) fbBox.classList.add('hidden');
+    toast('已記憶本機可正常直開導航，日後不再顯示此提示');
+  }
+
+  function copyNavLinkToClipboard() {
+    if (!lastPreparedNavUrl) return;
+    const ta = document.createElement('textarea');
+    ta.value = lastPreparedNavUrl;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      toast('已複製 Google 地圖導航連結');
+    } catch (e) {
+      toast('複製失敗，請長按左側按鈕開啟');
+    }
+    document.body.removeChild(ta);
+  }
+
+  function haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const rad = x => x * Math.PI / 180;
+    const dLat = rad(lat2 - lat1);
+    const dLon = rad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function initGPS() {
+    if (!('geolocation' in navigator)) {
+      document.getElementById('gpsStatusBadge').textContent = '不支援 GPS';
+      return;
+    }
+    navigator.geolocation.watchPosition(
+      pos => {
+        const { latitude, longitude, accuracy, speed } = pos.coords;
+        const acc = Math.round(accuracy || 999);
+        const badge = document.getElementById('gpsStatusBadge');
+        const ts = pos.timestamp || Date.now();
+
+        if (acc <= 20) {
+          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-emerald-200 text-emerald-950 whitespace-nowrap shrink-0 shadow-xs';
+          badge.textContent = `已就緒 ±${acc}m`;
+        } else if (acc <= 35) {
+          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-amber-200 text-amber-950 whitespace-nowrap shrink-0 shadow-xs';
+          badge.textContent = `良好 ±${acc}m`;
+        } else if (acc <= 45) {
+          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-orange-200 text-orange-950 whitespace-nowrap shrink-0 shadow-xs';
+          badge.textContent = `遮蔽 ±${acc}m`;
+        } else {
+          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-rose-200 text-rose-950 whitespace-nowrap shrink-0 shadow-xs';
+          badge.textContent = `訊號弱 ±${acc}m`;
+          return;
+        }
+
+        checkGeoRoad(latitude, longitude);
+
+        const kfPoint = applyKalmanFilter(latitude, longitude, acc, ts);
+        const w = 1 / Math.max(acc ** 2, 9);
+        gpsPoints.push({ lat: kfPoint.lat, lon: kfPoint.lon, w, ts });
+        if (gpsPoints.length > 3) gpsPoints.shift();
+
+        let sumW = 0, sLat = 0, sLon = 0;
+        gpsPoints.forEach(p => { sumW += p.w; sLat += p.lat * p.w; sLon += p.lon * p.w; });
+        const smooth = { lat: sLat / sumW, lon: sLon / sumW, ts };
+
+        if (lastSmoothPoint) {
+          const dMeters = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, smooth.lat, smooth.lon);
+          const dtSec = Math.max(0.5, (smooth.ts - lastSmoothPoint.ts) / 1000);
+          const hasChipSpeed = (typeof speed === 'number' && !isNaN(speed) && speed >= 0);
+          const chipKmh = hasChipSpeed ? speed * 3.6 : null;
+          const calcKmh = (dMeters / dtSec) * 3.6;
+
+          const baseDeadzone = Math.max(4.5, acc * 0.35);
+          const deadzone = (chipKmh !== null && chipKmh < 2.5) ? Math.max(baseDeadzone, acc * 0.65) : baseDeadzone;
+
+          if ((chipKmh !== null && chipKmh < 2.0 && dMeters < deadzone) || (chipKmh === null && dMeters < deadzone)) {
+            currentSpeedKmh = 0;
+          } else {
+            if (calcKmh > 190 && (chipKmh === null || chipKmh < 140)) return;
+            currentSpeedKmh = chipKmh !== null
+              ? Math.min(180, chipKmh * 0.75 + calcKmh * 0.25)
+              : Math.min(180, calcKmh);
+
+            const maxStepMeters = currentSpeedKmh > 60 ? 800 : 350;
+            if (appState.meter.running && !appState.meter.paused && dMeters >= deadzone && dMeters <= maxStepMeters) {
+              appState.meter.distMeters += dMeters;
+              if (appState.meter.roadMode === 'highway') {
+                appState.meter.highwayDistMeters = (appState.meter.highwayDistMeters || 0) + dMeters;
+              }
+            }
+          }
+        }
+        lastSmoothPoint = smooth;
+        refreshUI();
+      },
+      () => {
+        const badge = document.getElementById('gpsStatusBadge');
+        badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-rose-200 text-rose-950 whitespace-nowrap shrink-0 shadow-xs';
+        badge.textContent = '請開啟定位';
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+    );
+  }
+
+  setInterval(() => {
+    const m = appState.meter;
+    if (m.autoRoad) {
+      if (m.roadMode === 'local') {
+        if (isOnTollFreeway135) {
+          m.roadMode = 'highway';
+          playMeterSound('road');
+          toast('偵測進入國道 1/3/5 號，自動切換高速公路');
+        }
+      } else {
+        if (!isOnTollFreeway135) {
+          m.roadMode = 'local';
+          playMeterSound('road');
+          toast('目前非國道 1/3/5 號，自動切換為一般道路');
+        }
+      }
+    }
+    if (m.running && !m.paused) {
+      m.tripSeconds = (m.tripSeconds || 0) + 1;
+      if (currentSpeedKmh < 5) {
+        m.waitSeconds += 1;
+      }
+    }
+
+    saveAppState();
+    refreshUI();
+  }, 1000);
+
+  function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+  function esc(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+  function openCustomInput(title, defVal, inputType, cb) {
+    document.getElementById('customInputTitle').textContent = title;
+    const inp = document.getElementById('customInputVal');
+    inp.type = inputType || 'text';
+    inp.value = defVal;
+    document.getElementById('customInputConfirmBtn').onclick = () => {
+      closeModal('customInputModal');
+      if (inputType === 'number') {
+        const n = Math.round(Number(inp.value));
+        if (!isNaN(n) && n >= 0) cb(n);
+      } else {
+        cb(inp.value);
+      }
+    };
+    document.getElementById('customInputModal').classList.remove('hidden');
+    setTimeout(() => inp.focus(), 50);
+  }
+  function openConfirm(text, cb) {
+    document.getElementById('customConfirmText').textContent = text;
+    document.getElementById('customConfirmYesBtn').onclick = () => {
+      closeModal('customConfirmModal');
+      cb();
+    };
+    document.getElementById('customConfirmModal').classList.remove('hidden');
+  }
+
+  function compareSemver(remoteVer, localVer) {
+    const r = String(remoteVer || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+    const l = String(localVer || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+    const len = Math.max(r.length, l.length);
+    for (let i = 0; i < len; i++) {
+      const rv = r[i] || 0;
+      const lv = l[i] || 0;
+      if (rv > lv) return 1;
+      if (rv < lv) return -1;
+    }
+    return 0;
+  }
+
+  async function checkAppUpdate(isManual = false) {
+    const subEl = document.getElementById('updateCheckSubtext');
+    if (!UPDATE_MANIFEST_URL) {
+      if (isManual) toast('尚未綁定雲端版本網址');
+      return;
+    }
+    if (isManual && subEl) subEl.textContent = '正在連線檢查最新版本...';
+    try {
+      const sep = UPDATE_MANIFEST_URL.includes('?') ? '&' : '?';
+      const res = await fetch(`${UPDATE_MANIFEST_URL}${sep}_t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const remoteVer = String(data.version || '').trim();
+      if (remoteVer && compareSemver(remoteVer, APP_VERSION) > 0) {
+        document.getElementById('newVersionTag').textContent = remoteVer.startsWith('v') ? remoteVer : `v${remoteVer}`;
+        document.getElementById('newVersionNotes').textContent = data.notes || '功能優化與問題修復，建議立即更新。';
+        document.getElementById('newVersionDownloadBtn').href = data.url || DEFAULT_UPDATE_URL;
+        document.getElementById('updateAvailableModal').classList.remove('hidden');
+        if (subEl) subEl.textContent = `發現新版本 v${remoteVer.replace(/^v/i, '')}！`;
+      } else {
+        if (subEl) subEl.textContent = `目前已是最新版本 (v${APP_VERSION})`;
+        if (isManual) toast(`✅ 目前已是最新版本 (v${APP_VERSION})`);
+      }
+    } catch (e) {
+      if (subEl) subEl.textContent = '檢查失敗（請確認網路連線）';
+      if (isManual) toast('無法連線檢查更新，請稍後再試');
+    }
+  }
+
+  loadAppState();
+  renderLandmarkChips();
+  refreshUI();
+  initGPS();
+  setTimeout(promptResumeInterruptedTrip, 600);
+  setTimeout(() => checkAppUpdate(false), 2500);
+</script>
+
+<!-- ===== 試用到期鎖定與解鎖驗證模組 START ===== -->
+<style>
+  #trialLockOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: rgba(15, 23, 42, 0.96);
+    color: #f8fafc;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+  }
+  #trialLockOverlay.show {
+    display: flex;
+  }
+  .lock-card {
+    width: 100%;
+    max-width: 400px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  }
+  .lock-title {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+    color: #f87171;
+  }
+  .lock-desc {
+    margin: 0 0 16px;
+    font-size: 0.92rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+  }
+  .device-box {
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .device-id-text {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #38bdf8;
+    user-select: all;
+  }
+  .lock-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .copy-btn {
+    background: #334155;
+    color: #f8fafc;
+    padding: 7px 11px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .unlock-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid #475569;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 1.05rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .unlock-btn {
+    width: 100%;
+    background: #16a34a;
+    color: #ffffff;
+  }
+  .lock-msg {
+    margin-top: 10px;
+    min-height: 20px;
+    font-size: 0.88rem;
+    color: #fca5a5;
+  }
+</style>
+<div id="trialLockOverlay" aria-modal="true" role="dialog">
+  <div class="lock-card">
+    <h2 class="lock-title">⏰ 試用期已到期</h2>
+    <p class="lock-desc">
+      感謝您的使用，本版本試用期限已結束。請複製下方「裝置碼」並聯繫客服取得專屬解鎖碼：正式版每組500元永久使用權
+    </p>
+
+    <div class="device-box">
+      <div>
+        <div style="font-size:0.75rem;color:#94a3b8;">您的裝置碼</div>
+        <div class="device-id-text" id="lockDeviceIdDisplay">------</div>
+      </div>
+      <button type="button" class="lock-btn copy-btn" onclick="copyLockDeviceId()">複製裝置碼</button>
+    </div>
+
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:16px;font-size:0.9rem;color:#e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div>
+        <span style="color:#94a3b8;">聯繫客服 LINE ID：</span>
+        <strong style="color:#4ade80;user-select:all;">0988985290</strong>
+      </div>
+      <button type="button" class="lock-btn copy-btn" onclick="copyLineId()">複製 ID</button>
+    </div>
+
+    <input
+      type="text"
+      id="lockUnlockInput"
+      class="unlock-input"
+      placeholder="請輸入解鎖碼（例如 8K2P-9M4X）"
+      autocomplete="off"
+    />
+    <button type="button" class="lock-btn unlock-btn" onclick="submitUnlockCode()">立即解鎖</button>
+    <div class="lock-msg" id="lockStatusMsg"></div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const TRIAL_DAYS = 14;
+    const SECRET_SALT = "KUOKUEIFANG-3031984";
+
+    const KEY_FIRST_OPEN = "app_trial_first_open_ms_v1";
+    const KEY_DEVICE_ID = "app_trial_device_id_v1";
+    const KEY_UNLOCKED = "app_trial_unlocked_v1";
+
+    function getOrCreateDeviceId() {
+      let id = localStorage.getItem(KEY_DEVICE_ID);
+      if (!id) {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let gen = "";
+        for (let i = 0; i < 6; i++) {
+          gen += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        id = gen;
+        localStorage.setItem(KEY_DEVICE_ID, id);
+      }
+      return id;
+    }
+
+    function calcUnlockCode(rawDeviceId) {
+      const cleanId = String(rawDeviceId || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (!cleanId) return "";
+
+      const source = cleanId + "::" + SECRET_SALT;
+      let h1 = 0x811c9dc5;
+      let h2 = 0x1b873593;
+
+      for (let i = 0; i < source.length; i++) {
+        const ch = source.charCodeAt(i);
+        h1 ^= ch;
+        h1 = Math.imul(h1, 0x01000193);
+        h2 ^= ch + i;
+        h2 = Math.imul(h2, 0x85ebca6b);
+      }
+
+      const part1 = (h1 >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
+      const part2 = (h2 >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
+      return `${part1}-${part2}`;
+    }
+
+    function checkTrialStatus() {
+      const deviceId = getOrCreateDeviceId();
+      const expectedCode = calcUnlockCode(deviceId);
+      const savedUnlock = localStorage.getItem(KEY_UNLOCKED);
+
+      if (savedUnlock && savedUnlock === expectedCode) {
+        document.getElementById("trialLockOverlay").classList.remove("show");
+        return;
+      }
+
+      const now = Date.now();
+      let firstOpen = Number(localStorage.getItem(KEY_FIRST_OPEN) || 0);
+      if (!firstOpen) {
+        firstOpen = now;
+        localStorage.setItem(KEY_FIRST_OPEN, String(firstOpen));
+      }
+
+      const elapsedDays = (now - firstOpen) / (1000 * 60 * 60 * 24);
+      if (elapsedDays >= TRIAL_DAYS) {
+        document.getElementById("lockDeviceIdDisplay").textContent = deviceId;
+        document.getElementById("trialLockOverlay").classList.add("show");
+      }
+    }
+
+    window.copyLockDeviceId = function () {
+      const deviceId = getOrCreateDeviceId();
+      const msgEl = document.getElementById("lockStatusMsg");
+      const ta = document.createElement("textarea");
+      ta.value = deviceId;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      msgEl.style.color = "#38bdf8";
+      msgEl.textContent = "已複製裝置碼：" + deviceId;
+    };
+
+    window.copyLineId = function () {
+      const lineId = "0988985290";
+      const msgEl = document.getElementById("lockStatusMsg");
+      const ta = document.createElement("textarea");
+      ta.value = lineId;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      msgEl.style.color = "#4ade80";
+      msgEl.textContent = "已複製 LINE ID：" + lineId;
+    };
+
+    window.submitUnlockCode = function () {
+      const inputEl = document.getElementById("lockUnlockInput");
+      const msgEl = document.getElementById("lockStatusMsg");
+      const userCode = inputEl.value.trim().toUpperCase();
+      const deviceId = getOrCreateDeviceId();
+      const expectedCode = calcUnlockCode(deviceId);
+
+      if (!userCode) {
+        msgEl.style.color = "#fca5a5";
+        msgEl.textContent = "請先輸入解鎖碼。";
+        return;
+      }
+
+      if (userCode === expectedCode) {
+        localStorage.setItem(KEY_UNLOCKED, expectedCode);
+        msgEl.style.color = "#4ade80";
+        msgEl.textContent = "解鎖成功！正在進入系統...";
+        setTimeout(() => {
+          document.getElementById("trialLockOverlay").classList.remove("show");
+        }, 400);
+      } else {
+        msgEl.style.color = "#fca5a5";
+        msgEl.textContent = "解鎖碼不正確，請重新確認後再試。";
+      }
+    };
+
+    window.resetTrialLock = function () {
+      localStorage.removeItem(KEY_FIRST_OPEN);
+      localStorage.removeItem(KEY_UNLOCKED);
+      location.reload();
+    };
+
+    if (document.readyState === "loading") {
+      window.addEventListener("DOMContentLoaded", checkTrialStatus);
+    } else {
+      checkTrialStatus();
+    }
+  })();
+</script>
+<!-- ===== 試用到期鎖定與解鎖驗證模組 END ===== -->
+</body>
+</html>
