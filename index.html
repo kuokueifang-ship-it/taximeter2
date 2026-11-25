@@ -814,6 +814,9 @@
   let boundStartGpsCoords = null;
   let pendingInterruptedMeter = null;
 
+  // 授權核心狀態綁定（若下方驗證模組遭移除或竄改，_vAuthCore 將維持未授權狀態）
+  window._vAuthCore = function () { return false; };
+
   function applyKalmanFilter(lat, lon, acc, ts) {
     const variance = Math.max(acc, 3) ** 2;
     if (!kalmanState) {
@@ -1066,6 +1069,9 @@
   }
 
   function computeCurrentFare() {
+    if (typeof window._vAuthCore !== 'function' || !window._vAuthCore()) {
+      return { meterFare: 0, tollFee: 0, totalFare: 0 };
+    }
     const s = appState.settings;
     const m = appState.meter;
     let fare = 0;
@@ -1466,6 +1472,11 @@
   }
 
   function startTrip() {
+    if (typeof window._vAuthCore !== 'function' || !window._vAuthCore()) {
+      const ov = document.getElementById('trialLockOverlay');
+      if (ov) ov.classList.add('show');
+      return;
+    }
     unlockAndroidAudio();
     const m = appState.meter;
     m.running = true;
@@ -2318,6 +2329,11 @@
   }
 
   async function estimateFare() {
+    if (typeof window._vAuthCore !== 'function' || !window._vAuthCore()) {
+      const ov = document.getElementById('trialLockOverlay');
+      if (ov) ov.classList.add('show');
+      return;
+    }
     const startVal = document.getElementById('inputStartAddr').value.trim();
     const endVal = document.getElementById('inputEndAddr').value.trim();
     const box = document.getElementById('estimateResultBox');
@@ -2890,83 +2906,86 @@
 
 <script>
   (function () {
-    const TRIAL_DAYS = 14;
-    const SECRET_SALT = "KUOKUEIFANG-3031984";
+    const _d = 14;
+    const _k = [104, 118, 116, 104, 124, 108, 103, 98, 114, 101, 47, 51, 49, 51, 48, 55, 56, 51, 49];
+    const _m = [35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 34, 34, 34, 34, 34, 34, 34, 34, 34];
+    const _f1 = "\x61\x70\x70\x5f\x74\x72\x69\x61\x6c\x5f\x66\x69\x72\x73\x74\x5f\x6f\x70\x65\x6e\x5f\x6d\x73\x5f\x76\x31";
+    const _f2 = "\x61\x70\x70\x5f\x74\x72\x69\x61\x6c\x5f\x64\x65\x76\x69\x63\x65\x5f\x69\x64\x5f\x76\x31";
+    const _f3 = "\x61\x70\x70\x5f\x74\x72\x69\x61\x6c\x5f\x75\x6e\x6c\x6f\x63\x6b\x65\x64\x5f\x76\x31";
 
-    const KEY_FIRST_OPEN = "app_trial_first_open_ms_v1";
-    const KEY_DEVICE_ID = "app_trial_device_id_v1";
-    const KEY_UNLOCKED = "app_trial_unlocked_v1";
-
-    function getOrCreateDeviceId() {
-      let id = localStorage.getItem(KEY_DEVICE_ID);
+    function _gId() {
+      let id = localStorage.getItem(_f2);
       if (!id) {
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        let gen = "";
-        for (let i = 0; i < 6; i++) {
-          gen += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        id = gen;
-        localStorage.setItem(KEY_DEVICE_ID, id);
+        const c = "\x41\x42\x43\x44\x45\x46\x47\x48\x4a\x4b\x4c\x4d\x4e\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x32\x33\x34\x35\x36\x37\x38\x39";
+        let g = "";
+        for (let i = 0; i < 6; i++) g += c.charAt(Math.floor(Math.random() * c.length));
+        id = g;
+        localStorage.setItem(_f2, id);
       }
       return id;
     }
 
-    function calcUnlockCode(rawDeviceId) {
-      const cleanId = String(rawDeviceId || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (!cleanId) return "";
-
-      const source = cleanId + "::" + SECRET_SALT;
-      let h1 = 0x811c9dc5;
-      let h2 = 0x1b873593;
-
-      for (let i = 0; i < source.length; i++) {
-        const ch = source.charCodeAt(i);
-        h1 ^= ch;
-        h1 = Math.imul(h1, 0x01000193);
-        h2 ^= ch + i;
-        h2 = Math.imul(h2, 0x85ebca6b);
+    function _vSig(raw) {
+      const cid = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (!cid) return "";
+      let s = "";
+      for (let i = 0; i < _k.length; i++) s += String.fromCharCode(_k[i] ^ _m[i]);
+      const src = cid + "\x3a\x3a" + s;
+      let a = 0x811c9dc5, b = 0x1b873593;
+      for (let i = 0; i < src.length; i++) {
+        const ch = src.charCodeAt(i);
+        a ^= ch;
+        a = Math.imul(a, 0x01000193);
+        b ^= ch + i;
+        b = Math.imul(b, 0x85ebca6b);
       }
-
-      const part1 = (h1 >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
-      const part2 = (h2 >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
-      return `${part1}-${part2}`;
+      const p1 = (a >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
+      const p2 = (b >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
+      return p1 + "-" + p2;
     }
 
-    function checkTrialStatus() {
-      const deviceId = getOrCreateDeviceId();
-      const expectedCode = calcUnlockCode(deviceId);
-      const savedUnlock = localStorage.getItem(KEY_UNLOCKED);
-
-      if (savedUnlock && savedUnlock === expectedCode) {
-        document.getElementById("trialLockOverlay").classList.remove("show");
-        return;
-      }
-
-      const now = Date.now();
-      let firstOpen = Number(localStorage.getItem(KEY_FIRST_OPEN) || 0);
-      if (!firstOpen) {
-        firstOpen = now;
-        localStorage.setItem(KEY_FIRST_OPEN, String(firstOpen));
-      }
-
-      const elapsedDays = (now - firstOpen) / (1000 * 60 * 60 * 24);
-      if (elapsedDays >= TRIAL_DAYS) {
-        document.getElementById("lockDeviceIdDisplay").textContent = deviceId;
-        document.getElementById("trialLockOverlay").classList.add("show");
+    function _chk() {
+      try {
+        const id = _gId();
+        const exp = _vSig(id);
+        const sv = localStorage.getItem(_f3);
+        const ov = document.getElementById("trialLockOverlay");
+        if (sv && sv === exp) {
+          if (ov) ov.classList.remove("show");
+          return true;
+        }
+        const now = Date.now();
+        let fo = Number(localStorage.getItem(_f1) || 0);
+        if (!fo) {
+          fo = now;
+          localStorage.setItem(_f1, String(fo));
+        }
+        if ((now - fo) / 86400000 >= _d) {
+          const disp = document.getElementById("lockDeviceIdDisplay");
+          if (disp) disp.textContent = id;
+          if (ov) ov.classList.add("show");
+          return false;
+        }
+        return true;
+      } catch (e) {
+        return true;
       }
     }
+
+    window._vAuthCore = _chk;
+    if (typeof refreshUI === "function") refreshUI();
 
     window.copyLockDeviceId = function () {
-      const deviceId = getOrCreateDeviceId();
+      const id = _gId();
       const msgEl = document.getElementById("lockStatusMsg");
       const ta = document.createElement("textarea");
-      ta.value = deviceId;
+      ta.value = id;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand("copy");
       document.body.removeChild(ta);
       msgEl.style.color = "#38bdf8";
-      msgEl.textContent = "已複製裝置碼：" + deviceId;
+      msgEl.textContent = "已複製裝置碼：" + id;
     };
 
     window.copyLineId = function () {
@@ -2985,18 +3004,16 @@
     window.submitUnlockCode = function () {
       const inputEl = document.getElementById("lockUnlockInput");
       const msgEl = document.getElementById("lockStatusMsg");
-      const userCode = inputEl.value.trim().toUpperCase();
-      const deviceId = getOrCreateDeviceId();
-      const expectedCode = calcUnlockCode(deviceId);
-
-      if (!userCode) {
+      const u = inputEl.value.trim().toUpperCase();
+      const id = _gId();
+      const exp = _vSig(id);
+      if (!u) {
         msgEl.style.color = "#fca5a5";
         msgEl.textContent = "請先輸入解鎖碼。";
         return;
       }
-
-      if (userCode === expectedCode) {
-        localStorage.setItem(KEY_UNLOCKED, expectedCode);
+      if (u === exp) {
+        localStorage.setItem(_f3, exp);
         msgEl.style.color = "#4ade80";
         msgEl.textContent = "解鎖成功！正在進入系統...";
         setTimeout(() => {
@@ -3008,16 +3025,10 @@
       }
     };
 
-    window.resetTrialLock = function () {
-      localStorage.removeItem(KEY_FIRST_OPEN);
-      localStorage.removeItem(KEY_UNLOCKED);
-      location.reload();
-    };
-
     if (document.readyState === "loading") {
-      window.addEventListener("DOMContentLoaded", checkTrialStatus);
+      window.addEventListener("DOMContentLoaded", _chk);
     } else {
-      checkTrialStatus();
+      _chk();
     }
   })();
 </script>
