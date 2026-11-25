@@ -813,9 +813,9 @@
   let nonFreewayStreak = 0;
   let boundStartGpsCoords = null;
   let pendingInterruptedMeter = null;
-
-  // 授權核心狀態綁定（若下方驗證模組遭移除或竄改，_vAuthCore 將維持未授權狀態）
-  window._vAuthCore = function () { return false; };
+  let gpsWatchId = null;
+  let gpsPermissionDenied = false;
+  const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   function applyKalmanFilter(lat, lon, acc, ts) {
     const variance = Math.max(acc, 3) ** 2;
@@ -1479,6 +1479,9 @@
       return;
     }
     unlockAndroidAudio();
+    if (gpsWatchId === null && !gpsPermissionDenied) {
+      startContinuousGpsWatch();
+    }
     const m = appState.meter;
     m.running = true;
     m.paused = false;
@@ -1504,10 +1507,13 @@
     appState.meter.paused = !appState.meter.paused;
     saveAppState();
     refreshUI();
-    toast(appState.meter.paused ? '已暫停計費' : '已繼續計費');
+    toast(appState.meter.paused ? '已暫停計費' : '已恢復繼續計費');
   }
 
+  let checkoutExtraToll = 0;
   function openCheckoutModal() {
+    if (!appState.meter.running) return;
+    checkoutExtraToll = 0;
     const f = computeCurrentFare();
     document.getElementById('chkMeterVal').textContent = f.meterFare;
     document.getElementById('chkTollVal').textContent = f.tollFee;
@@ -1516,68 +1522,73 @@
     document.getElementById('checkoutModal').classList.remove('hidden');
   }
 
-  function applyDiscount(type) {
-    const orig = Number(document.getElementById('chkTotalVal').textContent) || 0;
-    let val = orig;
-    if (type === 'round10') val = Math.floor(orig / 10) * 10;
-    else if (typeof type === 'number') val = Math.round(orig * type);
-    document.getElementById('chkFinalAmount').value = val;
-  }
-
-  function adjustCheckoutAmount(delta) {
-    const inp = document.getElementById('chkFinalAmount');
-    inp.value = Math.max(0, (Number(inp.value) || 0) + delta);
-  }
-
-  function addCheckoutToll(amt) {
-    appState.meter.manualTollFee = (appState.meter.manualTollFee || 0) + amt;
+  function addCheckoutToll(delta) {
+    checkoutExtraToll = Math.max(0, checkoutExtraToll + delta);
     const f = computeCurrentFare();
-    document.getElementById('chkTollVal').textContent = f.tollFee;
-    document.getElementById('chkTotalVal').textContent = f.totalFare;
-    document.getElementById('chkFinalAmount').value = (Number(document.getElementById('chkFinalAmount').value) || 0) + amt;
-    refreshUI();
+    const newToll = f.tollFee + checkoutExtraToll;
+    const newTotal = f.meterFare + newToll;
+    document.getElementById('chkTollVal').textContent = newToll;
+    document.getElementById('chkTotalVal').textContent = newTotal;
+    document.getElementById('chkFinalAmount').value = newTotal;
   }
 
   function resetCheckoutToll() {
-    const old = appState.meter.tollFee;
+    checkoutExtraToll = 0;
     appState.meter.highwayDistMeters = 0;
     appState.meter.manualTollFee = 0;
     const f = computeCurrentFare();
     document.getElementById('chkTollVal').textContent = 0;
-    document.getElementById('chkTotalVal').textContent = f.totalFare;
-    document.getElementById('chkFinalAmount').value = Math.max(0, (Number(document.getElementById('chkFinalAmount').value) || 0) - old);
-    refreshUI();
+    document.getElementById('chkTotalVal').textContent = f.meterFare;
+    document.getElementById('chkFinalAmount').value = f.meterFare;
+    toast('國道通行費已歸零');
+  }
+
+  function applyDiscount(mode) {
+    const baseTotal = Number(document.getElementById('chkTotalVal').textContent) || 0;
+    let discounted = baseTotal;
+    if (mode === 'round10') {
+      discounted = Math.floor(baseTotal / 10) * 10;
+    } else if (typeof mode === 'number') {
+      discounted = Math.round(baseTotal * mode);
+    }
+    document.getElementById('chkFinalAmount').value = discounted;
+  }
+
+  function adjustCheckoutAmount(delta) {
+    const inp = document.getElementById('chkFinalAmount');
+    const cur = Number(inp.value) || 0;
+    inp.value = Math.max(0, cur + delta);
   }
 
   function confirmCheckout() {
     const f = computeCurrentFare();
-    const finalAmt = Math.max(0, Math.round(Number(document.getElementById('chkFinalAmount').value) || f.totalFare));
+    const finalToll = f.tollFee + checkoutExtraToll;
+    const finalFare = Math.max(0, Math.round(Number(document.getElementById('chkFinalAmount').value) || 0));
     const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mi = String(now.getMinutes()).padStart(2, '0');
-    const endTimeStr = `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const yearStr = `${now.getFullYear()}`;
+    const timeStr = `${dateStr} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const endAddr = document.getElementById('inputEndAddr').value.trim() || detectedRoadName || '現場下車';
 
     const rec = {
       id: Date.now(),
-      startTime: appState.meter.tripStartTime || endTimeStr,
-      time: endTimeStr,
-      dateStr: `${yyyy}-${mm}-${dd}`,
-      monthStr: `${yyyy}-${mm}`,
-      yearStr: `${yyyy}`,
-      start: document.getElementById('inputStartAddr').value.trim() || appState.meter.tripStartAddr || '現場上車',
-      end: document.getElementById('inputEndAddr').value.trim() || detectedRoadName || '目的地',
+      dateStr,
+      monthStr,
+      yearStr,
+      startTime: appState.meter.tripStartTime || timeStr,
+      time: timeStr,
+      start: appState.meter.tripStartAddr || '現場上車',
+      end: endAddr,
       distKm: Number((appState.meter.distMeters / 1000).toFixed(2)),
       meterFare: f.meterFare,
-      tollFee: f.tollFee,
-      finalFare: finalAmt,
+      tollFee: finalToll,
+      finalFare,
       hiddenInHistory: false,
       hiddenInReport: false
     };
-    appState.records.unshift(rec);
 
+    appState.records.unshift(rec);
     appState.meter.running = false;
     appState.meter.paused = false;
     appState.meter.distMeters = 0;
@@ -1586,23 +1597,118 @@
     appState.meter.waitSeconds = 0;
     appState.meter.manualTollFee = 0;
     appState.meter.tollFee = 0;
-    appState.meter.roadMode = 'local';
-    appState.meter.manualLockUntil = 0;
     appState.meter.jumpCount = 0;
-    appState.meter.tripStartTime = '';
-    appState.meter.tripStartAddr = detectedRoadName || '';
     appState.meter.targetTripMeters = 0;
-    lastSmoothPoint = null;
-    kalmanState = null;
-    gpsPoints = [];
+    checkoutExtraToll = 0;
 
     saveAppState();
     refreshUI();
     closeModal('checkoutModal');
-    toast(`已結算實收 $${finalAmt}，延滯計時與跳錶已自動歸零`);
-
+    toast(`✅ 已完成結算 NT$ ${finalFare}`);
     if (appState.settings.autoReceipt === 'on') {
       openReceiptModal(rec);
+    }
+  }
+
+  function handleGpsSuccess(pos) {
+    const { latitude, longitude, accuracy, speed } = pos.coords;
+    const acc = Math.round(accuracy || 999);
+    const badge = document.getElementById('gpsStatusBadge');
+    const ts = pos.timestamp || Date.now();
+
+    if (acc <= 20) {
+      badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-emerald-200 text-emerald-950 whitespace-nowrap shrink-0 shadow-xs';
+      badge.textContent = `已就緒 ±${acc}m`;
+    } else if (acc <= 35) {
+      badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-amber-200 text-amber-950 whitespace-nowrap shrink-0 shadow-xs';
+      badge.textContent = `良好 ±${acc}m`;
+    } else if (acc <= 45) {
+      badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-orange-200 text-orange-950 whitespace-nowrap shrink-0 shadow-xs';
+      badge.textContent = `遮蔽 ±${acc}m`;
+    } else {
+      badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-rose-200 text-rose-950 whitespace-nowrap shrink-0 shadow-xs';
+      badge.textContent = `訊號弱 ±${acc}m`;
+      return;
+    }
+
+    checkGeoRoad(latitude, longitude);
+
+    const kfPoint = applyKalmanFilter(latitude, longitude, acc, ts);
+    const w = 1 / Math.max(acc ** 2, 9);
+    gpsPoints.push({ lat: kfPoint.lat, lon: kfPoint.lon, w, ts });
+    if (gpsPoints.length > 3) gpsPoints.shift();
+
+    let sumW = 0, sLat = 0, sLon = 0;
+    gpsPoints.forEach(p => { sumW += p.w; sLat += p.lat * p.w; sLon += p.lon * p.w; });
+    const smooth = { lat: sLat / sumW, lon: sLon / sumW, ts };
+
+    if (lastSmoothPoint) {
+      const dMeters = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, smooth.lat, smooth.lon);
+      const dtSec = Math.max(0.5, (smooth.ts - lastSmoothPoint.ts) / 1000);
+      const hasChipSpeed = (typeof speed === 'number' && !isNaN(speed) && speed >= 0);
+      const chipKmh = hasChipSpeed ? speed * 3.6 : null;
+      const calcKmh = (dMeters / dtSec) * 3.6;
+
+      const baseDeadzone = Math.max(4.5, acc * 0.35);
+      const deadzone = (chipKmh !== null && chipKmh < 2.5) ? Math.max(baseDeadzone, acc * 0.65) : baseDeadzone;
+
+      if ((chipKmh !== null && chipKmh < 2.0 && dMeters < deadzone) || (chipKmh === null && dMeters < deadzone)) {
+        currentSpeedKmh = 0;
+      } else {
+        if (calcKmh > 190 && (chipKmh === null || chipKmh < 140)) return;
+        currentSpeedKmh = chipKmh !== null
+          ? Math.min(180, chipKmh * 0.75 + calcKmh * 0.25)
+          : Math.min(180, calcKmh);
+
+        const maxStepMeters = currentSpeedKmh > 60 ? 800 : 350;
+        if (appState.meter.running && !appState.meter.paused && dMeters >= deadzone && dMeters <= maxStepMeters) {
+          appState.meter.distMeters += dMeters;
+          if (appState.meter.roadMode === 'highway') {
+            appState.meter.highwayDistMeters = (appState.meter.highwayDistMeters || 0) + dMeters;
+          }
+        }
+      }
+    }
+    lastSmoothPoint = smooth;
+    refreshUI();
+  }
+
+  function handleGpsError(err) {
+    if (err && err.code === 1) {
+      gpsPermissionDenied = true;
+      if (gpsWatchId !== null) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+      }
+    }
+    const badge = document.getElementById('gpsStatusBadge');
+    badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-rose-200 text-rose-950 whitespace-nowrap shrink-0 shadow-xs';
+    badge.textContent = '請開啟定位';
+  }
+
+  function startContinuousGpsWatch() {
+    if (!('geolocation' in navigator) || gpsWatchId !== null) return;
+    gpsWatchId = navigator.geolocation.watchPosition(
+      handleGpsSuccess,
+      handleGpsError,
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 }
+    );
+  }
+
+  function initGPS() {
+    if (!('geolocation' in navigator)) {
+      document.getElementById('gpsStatusBadge').textContent = '不支援 GPS';
+      return;
+    }
+    if (isIOSDevice) {
+      // iOS 待機時僅做單次定位（只詢問一次，絕不連續彈窗轟炸），按下「開始載客跳錶」時才啟動連續追蹤
+      navigator.geolocation.getCurrentPosition(
+        handleGpsSuccess,
+        handleGpsError,
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      );
+    } else {
+      startContinuousGpsWatch();
     }
   }
 
@@ -2606,83 +2712,6 @@
     const dLon = rad(lon2 - lon1);
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  function initGPS() {
-    if (!('geolocation' in navigator)) {
-      document.getElementById('gpsStatusBadge').textContent = '不支援 GPS';
-      return;
-    }
-    navigator.geolocation.watchPosition(
-      pos => {
-        const { latitude, longitude, accuracy, speed } = pos.coords;
-        const acc = Math.round(accuracy || 999);
-        const badge = document.getElementById('gpsStatusBadge');
-        const ts = pos.timestamp || Date.now();
-
-        if (acc <= 20) {
-          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-emerald-200 text-emerald-950 whitespace-nowrap shrink-0 shadow-xs';
-          badge.textContent = `已就緒 ±${acc}m`;
-        } else if (acc <= 35) {
-          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-amber-200 text-amber-950 whitespace-nowrap shrink-0 shadow-xs';
-          badge.textContent = `良好 ±${acc}m`;
-        } else if (acc <= 45) {
-          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-orange-200 text-orange-950 whitespace-nowrap shrink-0 shadow-xs';
-          badge.textContent = `遮蔽 ±${acc}m`;
-        } else {
-          badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-rose-200 text-rose-950 whitespace-nowrap shrink-0 shadow-xs';
-          badge.textContent = `訊號弱 ±${acc}m`;
-          return;
-        }
-
-        checkGeoRoad(latitude, longitude);
-
-        const kfPoint = applyKalmanFilter(latitude, longitude, acc, ts);
-        const w = 1 / Math.max(acc ** 2, 9);
-        gpsPoints.push({ lat: kfPoint.lat, lon: kfPoint.lon, w, ts });
-        if (gpsPoints.length > 3) gpsPoints.shift();
-
-        let sumW = 0, sLat = 0, sLon = 0;
-        gpsPoints.forEach(p => { sumW += p.w; sLat += p.lat * p.w; sLon += p.lon * p.w; });
-        const smooth = { lat: sLat / sumW, lon: sLon / sumW, ts };
-
-        if (lastSmoothPoint) {
-          const dMeters = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, smooth.lat, smooth.lon);
-          const dtSec = Math.max(0.5, (smooth.ts - lastSmoothPoint.ts) / 1000);
-          const hasChipSpeed = (typeof speed === 'number' && !isNaN(speed) && speed >= 0);
-          const chipKmh = hasChipSpeed ? speed * 3.6 : null;
-          const calcKmh = (dMeters / dtSec) * 3.6;
-
-          const baseDeadzone = Math.max(4.5, acc * 0.35);
-          const deadzone = (chipKmh !== null && chipKmh < 2.5) ? Math.max(baseDeadzone, acc * 0.65) : baseDeadzone;
-
-          if ((chipKmh !== null && chipKmh < 2.0 && dMeters < deadzone) || (chipKmh === null && dMeters < deadzone)) {
-            currentSpeedKmh = 0;
-          } else {
-            if (calcKmh > 190 && (chipKmh === null || chipKmh < 140)) return;
-            currentSpeedKmh = chipKmh !== null
-              ? Math.min(180, chipKmh * 0.75 + calcKmh * 0.25)
-              : Math.min(180, calcKmh);
-
-            const maxStepMeters = currentSpeedKmh > 60 ? 800 : 350;
-            if (appState.meter.running && !appState.meter.paused && dMeters >= deadzone && dMeters <= maxStepMeters) {
-              appState.meter.distMeters += dMeters;
-              if (appState.meter.roadMode === 'highway') {
-                appState.meter.highwayDistMeters = (appState.meter.highwayDistMeters || 0) + dMeters;
-              }
-            }
-          }
-        }
-        lastSmoothPoint = smooth;
-        refreshUI();
-      },
-      () => {
-        const badge = document.getElementById('gpsStatusBadge');
-        badge.className = 'px-2.5 py-1 rounded-full text-xs font-black bg-rose-200 text-rose-950 whitespace-nowrap shrink-0 shadow-xs';
-        badge.textContent = '請開啟定位';
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-    );
   }
 
   setInterval(() => {
