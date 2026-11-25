@@ -649,7 +649,7 @@
         <!-- 4. 版本資訊與手動檢查更新 -->
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.6</span></div>
+            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.7</span></div>
             <div id="updateCheckSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動檢查雲端最新版本</div>
           </div>
           <button type="button" onclick="checkAppUpdate(true)" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
@@ -664,7 +664,7 @@
   <div id="updateAvailableModal" class="hidden fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-4 shadow-2xl border border-amber-400/60 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.6</span></h3>
+        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.7</span></h3>
         <button type="button" onclick="closeModal('updateAvailableModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
       </div>
       <div class="bg-[#0d1424] rounded-2xl p-3 border border-slate-700/70 space-y-1.5 text-xs">
@@ -739,7 +739,7 @@
 
 <script>
   const APP_KEY = 'taximeter_dark_cockpit_v1';
-  const APP_VERSION = '1.0.6';
+  const APP_VERSION = '1.0.7';
   const UPDATE_MANIFEST_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/version.json';
   const DEFAULT_UPDATE_URL = 'https://reurl.cc/aEQ6Zl';
   const ETAG_RATE_PER_KM = 1.2;
@@ -1410,7 +1410,8 @@
         const city = addr.city || addr.county || '';
         const district = addr.suburb || addr.town || addr.city_district || '';
         const road = addr.road || addr.highway || data.name || '';
-        const house = addr.house_number ? `${addr.house_number}號` : '';
+        const cleanHouseNum = addr.house_number ? String(addr.house_number).trim().replace(/號+$/g, '') : '';
+        const house = cleanHouseNum ? `${cleanHouseNum}號` : '';
         const refTag = data.extratags?.ref || addr.state_district || '';
         const roadCheckPool = [road, data.name, refTag, data.display_name].filter(Boolean).join(' ');
         const hitFreeway = isPaidNationalFreeway135(roadCheckPool);
@@ -1425,7 +1426,7 @@
           }
         }
 
-        const fullLabel = [city, district, road ? ` ${road}${house}` : ''].join('').trim();
+        const fullLabel = [city, district, road ? ` ${road}${house}` : ''].join('').trim().replace(/號{2,}/g, '號');
         if (fullLabel) return fullLabel;
       }
     } catch (e) {}
@@ -2095,8 +2096,8 @@
   async function fillCurrentLocation() {
     const startInp = document.getElementById('inputStartAddr');
     if (lastSmoothPoint) {
-      boundStartGpsCoords = { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon };
       if (detectedRoadName) {
+        boundStartGpsCoords = null;
         startInp.value = detectedRoadName;
         refreshUI();
         toast('已帶入目前定位地址');
@@ -2105,11 +2106,13 @@
       toast('正在反查目前道路地址...');
       const label = await reverseGeocodeLabel(lastSmoothPoint.lat, lastSmoothPoint.lon);
       if (label) {
+        boundStartGpsCoords = null;
         detectedRoadName = label;
         startInp.value = label;
         refreshUI();
         toast('已帶入目前定位地址');
       } else {
+        boundStartGpsCoords = { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon };
         startInp.value = `${lastSmoothPoint.lat.toFixed(5)}, ${lastSmoothPoint.lon.toFixed(5)}`;
         refreshUI();
         toast('網路無法反查路名，已帶入 GPS 座標');
@@ -2120,14 +2123,15 @@
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         lastSmoothPoint = { lat, lon, ts: Date.now() };
-        boundStartGpsCoords = { lat, lon };
         const label = await reverseGeocodeLabel(lat, lon);
         if (label) {
+          boundStartGpsCoords = null;
           detectedRoadName = label;
           startInp.value = label;
           refreshUI();
           toast('已帶入目前定位地址');
         } else {
+          boundStartGpsCoords = { lat, lon };
           startInp.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
           refreshUI();
           toast('已帶入目前 GPS 座標');
@@ -2155,7 +2159,7 @@
     }
 
     const knownPlaces = [
-      { keys: ['納智捷土城廠', 'LUXGEN土城', '納智捷土城'], lat: 24.9852, lon: 121.4519, label: '納智捷土城廠' },
+      { keys: ['納智捷土城廠', '納智捷土城交車中心', '納智捷土城服務廠', 'LUXGEN土城', 'LUXGEN土城交車中心', 'LUXGEN土城廠', 'LUNGEN土城', 'LUNGEN土城交車中心', '納智捷土城'], lat: 24.9852, lon: 121.4519, label: '納智捷土城交車中心' },
       { keys: ['三峽老街', '三峽祖師廟', '三峽區', '三峽'], lat: 24.9333, lon: 121.3694, label: '三峽老街' },
       { keys: ['板橋車站', '板橋火車站', '板橋高鐵', '板橋轉運站', '板橋'], lat: 25.0143, lon: 121.4638, label: '板橋車站' },
       { keys: ['桃園國際機場第一航廈', '桃園機場第一航廈', '桃機一航', '第一航廈'], lat: 25.0777, lon: 121.2328, label: '桃園國際機場第一航廈' },
@@ -2197,7 +2201,7 @@
       { keys: ['土城', '永寧'], lat: 24.9722, lon: 121.4433, label: '土城區' },
       { keys: ['鶯歌', '鶯歌老街'], lat: 24.9554, lon: 121.3547, label: '鶯歌區' }
     ];
-    const norm = raw.replace(/^台灣|^臺灣/, '').replace(/\s+/g, '');
+    const norm = raw.replace(/^台灣|^臺灣/, '').replace(/號{2,}/g, '號').replace(/\s+/g, '');
     const normStation = norm.replace(/火車站/g, '車站');
     const hasSpecificStreetOrPoi = /([路街大道巷弄號]|一段|二段|三段|四段|五段|六段|醫院|學校|大學|公司|工廠|公園|市場|百貨|飯店|旅館)/.test(norm);
     const exactKnown = knownPlaces.find(p => p.keys.some(k => norm === k || normStation === k || (norm.includes(k) && (k.length >= 4 || (!hasSpecificStreetOrPoi && norm.length <= 6)))));
@@ -2368,21 +2372,31 @@
 
       let km = 0;
       let estMin = 0;
+      let routeUsesHighway = false;
       try {
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?overview=false&alternatives=3&continue_straight=false`;
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?overview=false&alternatives=3&steps=true&continue_straight=false`;
         const rRes = await fetch(osrmUrl);
         const rData = await rRes.json();
         if (rData && rData.routes && rData.routes.length > 0) {
-          // 優先挑選「行車時間最快（或跨區長途時平均時速最高、走國道/快速道路）」的路線，更貼近 Google 導航實際路線
+          // 偵測每條候選路線是否走國道/快速道路，貼近 Google 導航「只要上國道更順暢就優先導國道」的邏輯
           const straightKm = haversineMeters(startCoords.lat, startCoords.lon, endCoords.lat, endCoords.lon) / 1000;
-          const bestRoute = rData.routes.reduce((best, cur) => {
-            if (straightKm >= 8) {
-              const bestSpeed = best.distance / Math.max(1, best.duration);
-              const curSpeed = cur.distance / Math.max(1, cur.duration);
-              if (cur.duration <= best.duration * 1.08 && curSpeed > bestSpeed * 1.15) return cur;
+          const analyzedRoutes = rData.routes.map(rt => {
+            const stepNames = (rt.legs || []).flatMap(lg => (lg.steps || []).map(st => `${st.name || ''} ${st.ref || ''}`)).join(' ');
+            const hasFreeway = /(國道|福爾摩沙|中山高|蔣渭水|五楊|汐五|台61|台62|台64|台65|台66|台68|台72|台74|台76|台78|台82|台84|台86|台88|Freeway|Expressway|國1|國3|國5|國2|國4|國6|國8|國10)/i.test(stepNames);
+            const avgKmh = (rt.distance / Math.max(1, rt.duration)) * 3.6;
+            return { route: rt, hasFreeway: hasFreeway || avgKmh >= 48, avgKmh };
+          });
+          const fastestDur = Math.min(...analyzedRoutes.map(x => x.route.duration));
+          const picked = analyzedRoutes.reduce((best, cur) => {
+            if (straightKm >= 5.5) {
+              // 只要走國道/快速道路比純平面快，或時間只差 2.5 分鐘內（Google 導航會優先選國道避開市區紅綠燈）
+              if (cur.hasFreeway && !best.hasFreeway && cur.route.duration <= best.route.duration + 150) return cur;
+              if (!cur.hasFreeway && best.hasFreeway && best.route.duration <= cur.route.duration + 150) return best;
             }
-            return cur.duration < best.duration ? cur : best;
-          }, rData.routes[0]);
+            return cur.route.duration < best.route.duration ? cur : best;
+          }, analyzedRoutes[0]);
+          const bestRoute = picked.route;
+          routeUsesHighway = picked.hasFreeway;
           km = Number((bestRoute.distance / 1000).toFixed(1));
           estMin = Math.max(1, Math.round(bestRoute.duration / 60));
         }
@@ -2412,7 +2426,7 @@
         const smoothTrip = (uBase + km * uKm + estMin * uMinRate) * surge;
         estMinFare = Math.round(Math.max(uMin, smoothTrip) + uFee);
         const trafficTrip = (uBase + km * uKm + (estMin * 1.25) * uMinRate) * surge;
-        const estEtagBuffer = km >= 8 ? Math.round(km * 0.65 * ETAG_RATE_PER_KM) : 0;
+        const estEtagBuffer = (routeUsesHighway || km >= 8) ? Math.round(km * 0.65 * ETAG_RATE_PER_KM) : 0;
         estMaxFare = Math.round(Math.max(uMin, trafficTrip) + uFee + estEtagBuffer);
         modeNote = '※ 目前為【平台里程＋時間雙計制】試算（含基本費、里程、行車時間與處理費），高標含路況與國道 eTag 緩衝，實際收費以法定跳錶或雙方約定為準。';
       } else {
@@ -2421,7 +2435,7 @@
           estMinFare += (Math.floor((meters - s.baseDist) / s.stepDist) + 1) * s.stepFare;
         }
         const estWaitBuffer = Math.ceil((estMinFare * 0.18) / s.stepFare) * s.stepFare;
-        const estEtagBuffer = km >= 8 ? Math.round(km * 0.65 * ETAG_RATE_PER_KM) : 0;
+        const estEtagBuffer = (routeUsesHighway || km >= 8) ? Math.round(km * 0.65 * ETAG_RATE_PER_KM) : 0;
         estMaxFare = Math.max(estMinFare + s.stepFare, Math.round((estMinFare + estWaitBuffer + estEtagBuffer) / 5) * 5);
         modeNote = '※ 低標為順暢純里程車資，高標已納入紅燈停等延滯與國道 eTag 緩衝估算，實際收費以法定跳錶或雙方約定為準。';
       }
@@ -2485,19 +2499,24 @@
         if (sc && ec) {
           let routeMeters = 0;
           try {
-            const rRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${sc.lon},${sc.lat};${ec.lon},${ec.lat}?overview=false&alternatives=3&continue_straight=false`);
+            const rRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${sc.lon},${sc.lat};${ec.lon},${ec.lat}?overview=false&alternatives=3&steps=true&continue_straight=false`);
             const rData = await rRes.json();
             if (rData && rData.routes && rData.routes.length > 0) {
               const straightKm = haversineMeters(sc.lat, sc.lon, ec.lat, ec.lon) / 1000;
-              const bestRoute = rData.routes.reduce((best, cur) => {
-                if (straightKm >= 8) {
-                  const bestSpeed = best.distance / Math.max(1, best.duration);
-                  const curSpeed = cur.distance / Math.max(1, cur.duration);
-                  if (cur.duration <= best.duration * 1.08 && curSpeed > bestSpeed * 1.15) return cur;
+              const analyzedRoutes = rData.routes.map(rt => {
+                const stepNames = (rt.legs || []).flatMap(lg => (lg.steps || []).map(st => `${st.name || ''} ${st.ref || ''}`)).join(' ');
+                const hasFreeway = /(國道|福爾摩沙|中山高|蔣渭水|五楊|汐五|台61|台62|台64|台65|台66|台68|台72|台74|台76|台78|台82|台84|台86|台88|Freeway|Expressway|國1|國3|國5|國2|國4|國6|國8|國10)/i.test(stepNames);
+                const avgKmh = (rt.distance / Math.max(1, rt.duration)) * 3.6;
+                return { route: rt, hasFreeway: hasFreeway || avgKmh >= 48 };
+              });
+              const picked = analyzedRoutes.reduce((best, cur) => {
+                if (straightKm >= 5.5) {
+                  if (cur.hasFreeway && !best.hasFreeway && cur.route.duration <= best.route.duration + 150) return cur;
+                  if (!cur.hasFreeway && best.hasFreeway && best.route.duration <= cur.route.duration + 150) return best;
                 }
-                return cur.duration < best.duration ? cur : best;
-              }, rData.routes[0]);
-              routeMeters = bestRoute.distance;
+                return cur.route.duration < best.route.duration ? cur : best;
+              }, analyzedRoutes[0]);
+              routeMeters = picked.route.distance;
             }
           } catch (e) {}
           if (!routeMeters || routeMeters <= 0) {
