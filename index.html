@@ -53,6 +53,12 @@
   body.theme-light .text-slate-300,
   body.theme-light .text-slate-400 { color: #475569 !important; }
   body.theme-light .text-sky-400 { color: #0369a1 !important; }
+  body.theme-light #updateAvailableModal .text-amber-400 { color: #b45309 !important; }
+  body.theme-light #updateAvailableModal .text-emerald-300 {
+    color: #065f46 !important;
+    background-color: #ecfdf5 !important;
+    border-color: #6ee7b7 !important;
+  }
   body.theme-light #hwyDistLabel {
     background-color: #e0f2fe !important;
     border-color: #0284c7 !important;
@@ -71,6 +77,11 @@
     color: #0f172a !important;
   }
   body.theme-light .bg-slate-800 { background-color: #e2e8f0 !important; }
+  body.theme-light .address-tip-box {
+    background-color: #fef3c7 !important;
+    border-color: #f59e0b !important;
+    color: #78350f !important;
+  }
 
   @media print {
     body * { visibility: hidden; }
@@ -94,7 +105,7 @@
 
   <div class="w-full max-w-md sm:max-w-5xl mx-auto px-3 sm:px-4 py-3 space-y-3">
 
-    <!-- 頂部卡片（手機直屏上下排列、橫屏自動換行防溢出、平板車機單行橫向集中上半部） -->
+    <!-- 頂部卡片 -->
     <header class="bg-[#151e32] rounded-3xl border border-slate-700/60 p-3.5 sm:px-4 sm:py-3 shadow-xl flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap sm:items-center sm:justify-between gap-2.5">
       <div class="flex items-center gap-2.5 shrink-0">
         <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-400 flex items-center justify-center text-xl shrink-0">
@@ -127,7 +138,7 @@
       </div>
     </header>
 
-    <!-- 主內容區：手機直屏單欄；手機橫屏/平板/車載大螢幕左右雙欄集中在上半部 -->
+    <!-- 主內容區 -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
 
       <!-- 左欄：主跳錶儀表板 -->
@@ -154,13 +165,12 @@
               </div>
             </div>
           </div>
-          <!-- 跳錶金額下方合規免責聲明小卡片 -->
           <div class="rounded-xl bg-[#a1887f] text-white text-[11px] sm:text-xs font-bold text-center py-2 px-3 leading-snug shadow-xs">
             ※ 僅供試算參考，實際收費以法定計費表或雙方約定為準
           </div>
         </div>
 
-        <!-- 黃金操作區：大顆綠色「開始載客跳錶」/「暫停・結算」控制鈕 -->
+        <!-- 黃金操作區 -->
         <div>
           <button type="button" id="btnStartTrip" onclick="startTrip()" class="w-full py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 text-white text-lg font-black shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition active:scale-[0.98]">
             <span>▶</span><span>開始載客跳錶</span>
@@ -196,7 +206,6 @@
             </button>
           </div>
 
-          <!-- 目前 / 起點 / 終點 位置資訊（還原至道路切換鈕下方） -->
           <div class="pt-1.5 border-t border-slate-700/60 space-y-1 text-xs">
             <div class="truncate text-slate-400">目前：<strong id="meterCurrPosText" class="text-slate-200 font-bold">等待定位中...</strong></div>
             <div class="truncate text-emerald-500 font-bold">🟢 起點：<strong id="meterStartPosText" class="text-emerald-400 font-bold">尚未定位</strong></div>
@@ -238,7 +247,7 @@
           </div>
         </div>
 
-        <!-- 雙模式通用：行程 / 每公里里程進度條（含小計程車在路上跑） -->
+        <!-- 行程 / 每公里里程進度條 -->
         <div class="px-0.5 pt-1">
           <div class="flex items-center gap-2.5">
             <span id="kmProgressLabel" class="text-xs font-bold text-slate-400 whitespace-nowrap w-16">里程進度</span>
@@ -253,7 +262,7 @@
           </div>
         </div>
 
-        <!-- 續跳里程 & 延滯跳錶 進度條（僅傳統跳錶制顯示） -->
+        <!-- 續跳里程 & 延滯跳錶 進度條 -->
         <div id="taxiStepProgressSection" class="space-y-2 px-0.5 pb-1">
           <div class="flex items-center gap-2.5">
             <span class="text-xs font-bold text-slate-400 whitespace-nowrap w-16">續跳里程</span>
@@ -274,36 +283,64 @@
 
       <!-- 右欄：📍 路線設定與車資預估卡片 -->
       <section class="bg-[#151e32] rounded-3xl border border-slate-700/60 p-3.5 shadow-xl space-y-3">
-        <div class="flex items-center justify-between gap-2">
+        <div class="space-y-2">
           <h2 class="text-sm sm:text-base font-black text-slate-100 flex items-center gap-1.5">
             <span>📍</span><span>路線設定與車資預估</span>
           </h2>
-          <button type="button" onclick="swapStartEndAddr()" class="px-3 py-1.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-sky-400 whitespace-nowrap shrink-0 active:scale-95">
-            ⇅ 起終互換
-          </button>
+          <div id="routeHeaderActionRow" class="grid grid-cols-2 gap-2">
+            <button type="button" id="btnToggleRoutePanel" onclick="toggleRoutePanelCollapse()" class="py-1.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 border border-amber-300 text-xs font-black text-slate-950 shadow-sm whitespace-nowrap active:scale-95">
+              收合 ▴
+            </button>
+            <button type="button" id="btnSwapRouteHeader" onclick="swapStartEndAddr()" class="py-1.5 px-3 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-sky-400 whitespace-nowrap active:scale-95">
+              ⇅ 起終互換
+            </button>
+          </div>
         </div>
 
-        <!-- 上車起點 ＋ 目前位置 -->
-        <div class="flex gap-2">
-          <input type="text" id="inputStartAddr" oninput="onStartAddrManualInput()" placeholder="上車起點（留空自動帶入目前位置）" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[#111827] border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500">
-          <button type="button" onclick="fillCurrentLocation()" class="px-3 py-2.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-sky-400 whitespace-nowrap shrink-0 active:scale-95">
-            📍 目前位置
-          </button>
-        </div>
+        <!-- 收合狀態時的下拉摘要條 -->
+        <button type="button" id="routeCollapsedSummary" onclick="toggleRoutePanelCollapse()" class="hidden w-full text-left px-3.5 py-2.5 rounded-2xl bg-[#111827] hover:bg-slate-800/80 border border-amber-400/50 text-xs flex items-center justify-between gap-2 transition active:scale-[0.99]">
+          <span class="font-bold text-slate-200 truncate">🧭 路線設定已收合（點此展開修改起終點）</span>
+          <span class="px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-black whitespace-nowrap shrink-0">展開 ▾</span>
+        </button>
 
-        <!-- 終點輸入 ＋ 清空 -->
-        <div class="flex gap-2">
-          <input type="text" id="inputEndAddr" oninput="refreshUI()" placeholder="輸入地址、路名、地標..." class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[#111827] border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500">
-          <button type="button" onclick="clearRouteInputs()" class="px-3.5 py-2.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-slate-300 whitespace-nowrap shrink-0 active:scale-95">
-            清空
-          </button>
-        </div>
+        <!-- 可收合之起終點輸入框與常用地標群 -->
+        <div id="routeCollapsibleInputs" class="space-y-3">
+          <!-- 上車起點 ＋ 目前位置 -->
+          <div class="relative">
+            <div class="flex gap-1.5">
+              <input type="text" id="inputStartAddr" oninput="onStartAddrManualInput()" onfocus="onRouteInputFocus('start')" placeholder="上車起點（輸入公司名或留空帶入目前位置）" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[#111827] border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+              <button type="button" onclick="fillCurrentLocation()" class="px-2.5 py-2.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-sky-400 whitespace-nowrap shrink-0 active:scale-95">
+                📍 目前位置
+              </button>
+            </div>
+            <div id="startPoiSuggestBox" class="hidden mt-1.5 rounded-2xl bg-[#0d1424] border border-sky-500/50 p-2 shadow-xl space-y-1 text-xs"></div>
+          </div>
 
-        <!-- 填入終點/起點切換 ＋ 常用地標膠囊群 -->
-        <div id="landmarkChipsContainer" class="flex flex-wrap items-center gap-2"></div>
-        <p class="text-[11px] text-slate-400 leading-relaxed">
-          點選地標快速帶入；長按地標可刪除；按「+ 新增常用點」新增常用地點。
-        </p>
+          <!-- 終點輸入 ＋ 清空 -->
+          <div class="relative">
+            <div class="flex gap-1.5">
+              <input type="text" id="inputEndAddr" oninput="onEndAddrManualInput()" onfocus="onRouteInputFocus('end')" placeholder="輸入公司名稱、地址、路名、地標..." class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[#111827] border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+              <button type="button" onclick="clearRouteInputs()" class="px-2.5 py-2.5 rounded-xl bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-black text-slate-300 whitespace-nowrap shrink-0 active:scale-95">
+                清空
+              </button>
+            </div>
+            <div id="endPoiSuggestBox" class="hidden mt-1.5 rounded-2xl bg-[#0d1424] border border-sky-500/50 p-2 shadow-xl space-y-1 text-xs"></div>
+          </div>
+
+          <!-- 填入終點/起點切換 ＋ 常用地標膠囊群 -->
+          <div id="landmarkChipsContainer" class="flex flex-wrap items-center gap-2"></div>
+          <div class="address-tip-box rounded-xl bg-amber-500/15 border border-amber-400/50 px-3 py-2 text-xs font-bold text-amber-200 leading-relaxed space-y-1.5">
+            <button type="button" onclick="toggleAddressTipCollapse()" class="w-full flex items-center justify-between gap-2 text-left">
+              <span>💡 <strong>操作使用說明</strong></span>
+              <span id="addressTipToggleBadge" class="px-2 py-0.5 rounded-lg bg-amber-400/25 border border-amber-400/50 text-[11px] font-black text-amber-200 whitespace-nowrap shrink-0">收合 ▴</span>
+            </button>
+            <div id="addressTipBody" class="space-y-1 pt-0.5 border-t border-amber-400/30">
+              <div>1️⃣ <strong>輸入門牌更精準：</strong>直接輸入完整路名與門牌（例如：三峽區介壽路一段316號），試算與導航最準確。</div>
+              <div>2️⃣ <strong>公司/地標自動記憶：</strong>輸入公司或地標名稱，點選下方候選清單即自動帶入門牌並永久記憶，下次打名稱秒帶出。</div>
+              <div>3️⃣ <strong>一般商家快速建檔：</strong>若地圖無建檔，可點候選框「1. 用 Google 搜尋」複製門牌（或分享 Google 地圖連結），回來按「2. 貼上複製的門牌…」即永久記住該商家！</div>
+            </div>
+          </div>
+        </div>
 
         <!-- 試算結果顯示區 -->
         <div id="estimateResultBox" class="hidden rounded-2xl bg-[#0d1424] border border-sky-500/40 p-3 text-xs space-y-1.5"></div>
@@ -373,7 +410,6 @@
           </div>
         </div>
 
-        <!-- 國道通行費快速微調 -->
         <div class="space-y-1">
           <div class="text-[11px] font-bold text-slate-400">🎟️ 國道通行費手動微調（元）</div>
           <div class="grid grid-cols-6 gap-1">
@@ -386,7 +422,6 @@
           </div>
         </div>
 
-        <!-- 優惠折扣快捷按鈕 -->
         <div class="space-y-1">
           <div class="text-[11px] font-bold text-slate-400">🏷️ 優惠折扣 / 去零頭</div>
           <div class="grid grid-cols-5 gap-1">
@@ -398,7 +433,6 @@
           </div>
         </div>
 
-        <!-- 實收車資金額微調 -->
         <div class="space-y-1">
           <div class="text-[11px] font-bold text-slate-400">💰 實收車資金額（可直接輸入約定包車價）</div>
           <div class="flex items-center gap-2">
@@ -415,7 +449,7 @@
     </div>
   </div>
 
-  <!-- 58mm 收據列印視窗（z-[60] 確保浮在紀錄清單上方，並支援分屏內部捲動） -->
+  <!-- 58mm 收據列印視窗 -->
   <div id="receiptModal" class="hidden fixed inset-0 z-[60] bg-black/75 flex items-center justify-center p-2.5 overflow-y-auto">
     <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-3.5 shadow-2xl border border-slate-700 flex flex-col max-h-[92dvh] my-auto">
       <div class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2.5 shrink-0">
@@ -466,7 +500,7 @@
 
       <div class="flex items-center justify-between bg-[#0d1424] rounded-xl px-3 py-2 mb-2.5 border border-slate-700/70">
         <button type="button" onclick="moveReportOffset(-1)" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-600 text-xs font-bold">◀ 上一期</button>
-        <span id="reportPeriodTitle" class="mono text-sm font-black text-amber-400">2026-11-23</span>
+        <span id="reportPeriodTitle" class="mono text-sm font-black text-amber-400">2026-11-26</span>
         <button type="button" onclick="moveReportOffset(1)" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-600 text-xs font-bold">下一期 ▶</button>
       </div>
 
@@ -495,7 +529,6 @@
       </div>
 
       <div class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
-        <!-- 1. 畫面與音效設定 -->
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 space-y-2.5">
           <div class="text-xs font-black text-sky-400">🖥️ 畫面與提示音效</div>
 
@@ -517,7 +550,6 @@
           </div>
         </div>
 
-        <!-- 2. 跳錶費率參數 -->
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 space-y-2.5">
           <div class="text-xs font-black text-amber-400">🚕 計費模式與費率參數</div>
 
@@ -598,7 +630,6 @@
           </div>
         </div>
 
-        <!-- 3. 收據與列印設定 -->
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 space-y-2.5">
           <div class="text-xs font-black text-emerald-400">🧾 收據與列印設定</div>
 
@@ -646,10 +677,9 @@
           <input type="file" id="backupFileInput" accept=".json" class="hidden" onchange="importBackupJson(event)">
         </div>
 
-        <!-- 4. 版本資訊與手動檢查更新 -->
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.8</span></div>
+            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.9</span></div>
             <div id="updateCheckSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動檢查雲端最新版本</div>
           </div>
           <button type="button" onclick="checkAppUpdate(true)" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
@@ -664,14 +694,14 @@
   <div id="updateAvailableModal" class="hidden fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-4 shadow-2xl border border-amber-400/60 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.8</span></h3>
+        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.9</span></h3>
         <button type="button" onclick="closeModal('updateAvailableModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
       </div>
       <div class="bg-[#0d1424] rounded-2xl p-3 border border-slate-700/70 space-y-1.5 text-xs">
         <div class="text-slate-400 font-bold">✨ 本次更新內容：</div>
         <p id="newVersionNotes" class="text-slate-100 leading-relaxed whitespace-pre-line font-semibold">優化系統穩定性與操作體驗</p>
       </div>
-      <p class="text-[11px] text-emerald-300 leading-relaxed">
+      <p class="text-xs text-emerald-300 bg-emerald-950/50 border border-emerald-500/40 rounded-xl p-2.5 font-bold leading-relaxed">
         ※ 下載新版 APK 直接覆蓋安裝即可，<strong>原本的試用天數、解鎖狀態、報表與常用地點都會完整保留</strong>！
       </p>
       <div class="grid grid-cols-2 gap-2 pt-1">
@@ -683,7 +713,7 @@
     </div>
   </div>
 
-  <!-- 自訂輸入視窗（z-[70] 確保浮在所有彈窗最上層） -->
+  <!-- 自訂輸入視窗 -->
   <div id="customInputModal" class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-2xl w-full max-w-xs p-4 shadow-xl border border-slate-700 space-y-3">
       <h4 id="customInputTitle" class="font-black text-sm text-amber-400">請輸入內容</h4>
@@ -722,7 +752,7 @@
     </div>
   </div>
 
-  <!-- 自訂確認視窗（z-[70] 確保浮在所有彈窗最上層） -->
+  <!-- 自訂確認視窗 -->
   <div id="customConfirmModal" class="hidden fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-2xl w-full max-w-xs p-4 shadow-xl border border-slate-700 space-y-3 text-center">
       <div class="text-2xl">⚠️</div>
@@ -739,7 +769,7 @@
 
 <script>
   const APP_KEY = 'taximeter_dark_cockpit_v1';
-  const APP_VERSION = '1.0.8';
+  const APP_VERSION = '1.0.9';
   const UPDATE_MANIFEST_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/version.json';
   const DEFAULT_UPDATE_URL = 'https://reurl.cc/aEQ6Zl';
   const ETAG_RATE_PER_KM = 1.2;
@@ -765,6 +795,7 @@
     autoReceipt: 'on',
     showQuickReceipt: 'off',
     hideNavFallback: false,
+    tipCollapsed: false,
     fleet: '計程助手車隊',
     plate: 'TDX-8888',
     driver: '駕駛服務專線'
@@ -782,7 +813,17 @@
   let appState = {
     settings: { ...DEFAULT_SETTINGS },
     landmarks: [...DEFAULT_LANDMARKS],
+    companyCache: [],
     records: [],
+    routeDraft: {
+      startAddr: '',
+      endAddr: '',
+      startCoords: null,
+      endCoords: null,
+      lastSearchWhich: '',
+      lastSearchQuery: '',
+      updatedAt: 0
+    },
     meter: {
       running: false,
       paused: false,
@@ -810,11 +851,19 @@
   let lastRoadQueryTs = 0;
   let detectedRoadName = '';
   let isOnTollFreeway135 = false;
+  let freewayConfirmStreak = 0;
   let nonFreewayStreak = 0;
   let boundStartGpsCoords = null;
+  let boundEndGpsCoords = null;
+  let routePanelCollapsed = false;
+  let poiSearchTimers = { start: null, end: null };
+  let poiCandidatesMap = { start: [], end: [] };
   let pendingInterruptedMeter = null;
   let gpsWatchId = null;
   let gpsPermissionDenied = false;
+  let targetEndCoords = null;
+  let lastDynamicRerouteTs = 0;
+  let dynamicRerouteInFlight = false;
   const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   function applyKalmanFilter(lat, lon, acc, ts) {
@@ -836,7 +885,6 @@
     return { lat: kalmanState.lat, lon: kalmanState.lon, ts };
   }
 
-  // 85% 響亮提示音＋車載平板防音訊休眠保活引擎
   let audioCtx = null;
   let keepAliveAudioEl = null;
   let jumpWavUrl = null;
@@ -852,7 +900,7 @@
 
     writeStr(0, 'RIFF');
     view.setUint32(4, 36 + dataBytes, true);
-    writeStr(8, 'WAVE');
+    view.setUint8(8, 87); view.setUint8(9, 65); view.setUint8(10, 86); view.setUint8(11, 69);
     writeStr(12, 'fmt ');
     view.setUint32(16, 16, true);
     view.setUint16(20, 1, true);
@@ -968,6 +1016,24 @@
         if (Array.isArray(data.landmarks) && data.landmarks.length > 0) {
           appState.landmarks = data.landmarks;
         }
+        if (Array.isArray(data.companyCache)) {
+          appState.companyCache = data.companyCache.map(item => {
+            const rawAlias = String(item.alias || '').trim();
+            const rawAddr = String(item.addr || '').trim();
+            const m = rawAddr.match(/^(.+?)[（(]([^()（）]+)[)）]$/);
+            if (m) {
+              return {
+                ...item,
+                alias: rawAlias.replace(/[（(][^()（）]+[)）]$/, '').trim() || m[1].trim(),
+                addr: m[2].trim()
+              };
+            }
+            return item;
+          });
+        }
+        if (data.routeDraft && typeof data.routeDraft === 'object') {
+          appState.routeDraft = { ...appState.routeDraft, ...data.routeDraft };
+        }
         appState.records = Array.isArray(data.records) ? data.records : [];
         if (data.meter) {
           const wasRunning = Boolean(data.meter.running);
@@ -979,7 +1045,6 @@
           appState.meter = {
             ...appState.meter,
             ...data.meter,
-            // 每次開啟 App 一律先停在「空車待機」安全狀態，絕不自動跳錶
             running: false,
             paused: false,
             distMeters: 0,
@@ -1004,256 +1069,44 @@
     } catch (e) {}
   }
 
-  function promptResumeInterruptedTrip() {
-    if (!pendingInterruptedMeter) return;
-    const saved = pendingInterruptedMeter;
-    pendingInterruptedMeter = null;
-    const kmStr = ((Number(saved.distMeters) || 0) / 1000).toFixed(2);
-    const minStr = Math.floor((Number(saved.tripSeconds) || 0) / 60);
-    const msg = `偵測到上次關機前有一筆未結算行程：\n行駛里程：${kmStr} km（約 ${minStr} 分鐘）\n\n要接續這筆行程繼續計費，還是歸零重新開始？`;
-    const confirmTextEl = document.getElementById('customConfirmText');
-    const yesBtn = document.getElementById('customConfirmYesBtn');
-    const modal = document.getElementById('customConfirmModal');
-    if (!confirmTextEl || !yesBtn || !modal) return;
-    const cancelBtn = modal.querySelector('button[onclick*="customConfirmModal"]');
-    const origCancelText = cancelBtn ? cancelBtn.textContent : '取消';
-    const origYesText = yesBtn.textContent;
-    const origYesClass = yesBtn.className;
-
-    confirmTextEl.textContent = msg;
-    if (cancelBtn) cancelBtn.textContent = '歸零重新開始';
-    yesBtn.textContent = '✅ 繼續接續計費';
-    yesBtn.className = 'py-2 rounded-xl bg-emerald-600 text-white text-xs font-black';
-
-    const restoreBtns = () => {
-      if (cancelBtn) cancelBtn.textContent = origCancelText;
-      yesBtn.textContent = origYesText;
-      yesBtn.className = origYesClass;
+  function syncRouteDraftToStorage(extra = {}) {
+    const sVal = document.getElementById('inputStartAddr')?.value ?? '';
+    const eVal = document.getElementById('inputEndAddr')?.value ?? '';
+    appState.routeDraft = {
+      ...(appState.routeDraft || {}),
+      startAddr: sVal,
+      endAddr: eVal,
+      startCoords: boundStartGpsCoords ? { ...boundStartGpsCoords } : null,
+      endCoords: boundEndGpsCoords ? { ...boundEndGpsCoords } : null,
+      updatedAt: Date.now(),
+      ...extra
     };
+    saveAppState();
+  }
 
-    if (cancelBtn) {
-      cancelBtn.onclick = () => {
-        restoreBtns();
-        closeModal('customConfirmModal');
-        saveAppState();
-        toast('已歸零為空車待機狀態');
-      };
+  function restoreRouteDraftFromStorage() {
+    const d = appState.routeDraft;
+    if (!d) return;
+    const isFresh = !d.updatedAt || (Date.now() - d.updatedAt <= 6 * 60 * 60 * 1000);
+    if (!isFresh) return;
+    const sInp = document.getElementById('inputStartAddr');
+    const eInp = document.getElementById('inputEndAddr');
+    if (sInp && d.startAddr) sInp.value = d.startAddr;
+    if (eInp && d.endAddr) eInp.value = d.endAddr;
+    if (d.startCoords && typeof d.startCoords.lat === 'number') {
+      boundStartGpsCoords = { lat: d.startCoords.lat, lon: d.startCoords.lon };
     }
-    yesBtn.onclick = () => {
-      restoreBtns();
-      closeModal('customConfirmModal');
-      appState.meter = {
-        ...appState.meter,
-        ...saved,
-        running: true,
-        paused: false
-      };
-      saveAppState();
-      refreshUI();
-      toast(`已接續上次行程（${kmStr} km）繼續計費`);
-    };
-    modal.classList.remove('hidden');
-  }
-
-  function isNightHour() {
-    if (appState.settings.nightMode === 'off') return false;
-    const h = new Date().getHours();
-    return (h >= 23 || h < 6);
-  }
-
-  function applyThemeVisual() {
-    const mode = appState.settings.themeMode || 'auto';
-    const h = new Date().getHours();
-    const useLight = mode === 'light' || (mode === 'auto' && h >= 6 && h < 18);
-    document.body.classList.toggle('theme-light', useLight);
-  }
-
-  function computeCurrentFare() {
-    if (typeof window._vAuthCore !== 'function' || !window._vAuthCore()) {
-      return { meterFare: 0, tollFee: 0, totalFare: 0 };
+    if (d.endCoords && typeof d.endCoords.lat === 'number') {
+      boundEndGpsCoords = { lat: d.endCoords.lat, lon: d.endCoords.lon };
     }
-    const s = appState.settings;
-    const m = appState.meter;
-    let fare = 0;
-    let totalSteps = 0;
-
-    if (s.billingMode === 'uber') {
-      const km = (m.distMeters || 0) / 1000;
-      const mins = (m.tripSeconds || 0) / 60;
-      const surge = Math.max(1, Number(s.uberSurge) || 1);
-      const rawTrip = ((Number(s.uberBase) || 48) + km * (Number(s.uberPerKm) || 25) + mins * (Number(s.uberPerMin) || 3.4)) * surge;
-      const minFare = Number(s.uberMin) || 85;
-      const serviceFee = Number(s.uberServiceFee) || 0;
-      fare = Math.round(Math.max(minFare, rawTrip) + serviceFee);
-      // 平台雙計制為連續時間＋里程計費，行駛途中不觸發傳統跳錶「叮咚」聲
-      totalSteps = 0;
-    } else {
-      fare = s.baseFare;
-      if (isNightHour()) fare += s.nightAdd;
-
-      let distSteps = 0;
-      if (m.distMeters > s.baseDist) {
-        distSteps = Math.floor((m.distMeters - s.baseDist) / s.stepDist) + 1;
-      }
-      const waitSteps = Math.floor(m.waitSeconds / s.waitSec);
-      totalSteps = distSteps + waitSteps;
-      fare += totalSteps * s.stepFare;
-
-      if (m.running && totalSteps > m.jumpCount) {
-        m.jumpCount = totalSteps;
-        playMeterSound('jump');
+    if (d.lastSearchWhich && d.lastSearchQuery && d.lastSearchQuery.length >= 2) {
+      const targetVal = d.lastSearchWhich === 'start' ? d.startAddr : d.endAddr;
+      if (targetVal === d.lastSearchQuery) {
+        setTimeout(() => triggerPoiSuggestSearch(d.lastSearchWhich, d.lastSearchQuery), 150);
       }
     }
-
-    const autoEtag = Math.round(((m.highwayDistMeters || 0) / 1000) * ETAG_RATE_PER_KM);
-    const totalToll = autoEtag + (m.manualTollFee || 0);
-    m.tollFee = totalToll;
-
-    return { meterFare: fare, tollFee: totalToll, totalFare: fare + totalToll };
   }
 
-  function refreshUI() {
-    const f = computeCurrentFare();
-    const s = appState.settings;
-    const m = appState.meter;
-
-    const rateTag = document.getElementById('ratePeriodTag');
-    const tariffLabel = document.getElementById('tariffTypeLabel');
-    if (s.billingMode === 'uber') {
-      const surge = Math.max(1, Number(s.uberSurge) || 1);
-      rateTag.innerHTML = '<span>🚗</span><span class="truncate">平台雙計制</span>';
-      rateTag.className = 'flex items-center gap-1.5 text-xs sm:text-sm font-black text-emerald-400 min-w-0 truncate';
-      tariffLabel.textContent = surge > 1 ? `雙計 ${surge.toFixed(1)}x 加成` : '平台雙計費率';
-    } else if (isNightHour() && s.nightAdd > 0) {
-      rateTag.innerHTML = '<span>🌙</span><span class="truncate">夜間加成費率</span>';
-      rateTag.className = 'flex items-center gap-1.5 text-xs sm:text-sm font-black text-amber-400 min-w-0 truncate';
-      tariffLabel.textContent = `夜間 +$${s.nightAdd}`;
-    } else {
-      rateTag.innerHTML = '<span>☀️</span><span class="truncate">日間費率</span>';
-      rateTag.className = 'flex items-center gap-1.5 text-xs sm:text-sm font-black text-sky-400 min-w-0 truncate';
-      tariffLabel.textContent = '標準起跳';
-    }
-
-    const pEmpty = document.getElementById('pillEmpty');
-    const pActive = document.getElementById('pillActive');
-    const pPaused = document.getElementById('pillPaused');
-    const basePill = 'px-2.5 py-1 rounded-xl text-xs font-black bg-[#1e293b] text-slate-400 border border-slate-700 whitespace-nowrap';
-    pEmpty.className = basePill;
-    pActive.className = basePill;
-    pPaused.className = basePill;
-
-    if (!m.running) {
-      pEmpty.className = 'px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-600 text-white border border-emerald-400 whitespace-nowrap shadow-sm';
-    } else if (m.paused) {
-      pPaused.className = 'px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 border border-amber-300 whitespace-nowrap shadow-sm';
-    } else {
-      pActive.className = 'px-2.5 py-1 rounded-xl text-xs font-black bg-rose-600 text-white border border-rose-400 whitespace-nowrap shadow-sm';
-    }
-
-    // 自動感應與道路按鈕狀態
-    const btnAuto = document.getElementById('btnAutoRoad');
-    const btnAutoLabel = document.getElementById('btnAutoRoadLabel');
-    btnAutoLabel.textContent = m.autoRoad ? '自動感應：開' : '手動切換：開';
-    btnAuto.className = m.autoRoad
-      ? 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-black bg-sky-950/90 text-sky-300 border border-sky-500/60 whitespace-nowrap shrink-0 active:scale-95'
-      : 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-black bg-amber-950/90 text-amber-300 border border-amber-500/60 whitespace-nowrap shrink-0 active:scale-95';
-
-    const btnLocal = document.getElementById('btnLocalRoad');
-    const btnHwy = document.getElementById('btnHighwayRoad');
-    const lockCls = m.autoRoad ? ' opacity-50 cursor-not-allowed pointer-events-none' : ' active:scale-95';
-    btnLocal.disabled = Boolean(m.autoRoad);
-    btnHwy.disabled = Boolean(m.autoRoad);
-    btnLocal.setAttribute('aria-disabled', m.autoRoad ? 'true' : 'false');
-    btnHwy.setAttribute('aria-disabled', m.autoRoad ? 'true' : 'false');
-    if (m.roadMode === 'local') {
-      btnLocal.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-sky-600 text-white border border-sky-400 shadow-md flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
-      btnHwy.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-[#1e293b] text-slate-300 border border-slate-700 flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
-    } else {
-      btnLocal.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-[#1e293b] text-slate-300 border border-slate-700 flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
-      btnHwy.className = 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-sky-600 text-white border border-sky-400 shadow-md flex items-center justify-center gap-1 whitespace-nowrap transition' + lockCls;
-    }
-    const statusText = document.getElementById('autoRoadStatusText');
-    if (statusText) {
-      statusText.textContent = m.autoRoad
-        ? (m.roadMode === 'highway' ? '🚄 國道 1/3/5 號計費中' : '國道 1/3/5 號（自動鎖定）')
-        : (m.roadMode === 'highway' ? '手動：高速公路計 eTag' : '手動：一般道路模式');
-    }
-
-    // 金額與通行費
-    const fareAmtEl = document.getElementById('fareAmount');
-    if (fareAmtEl) fareAmtEl.textContent = f.totalFare;
-    const tollDispEl = document.getElementById('tollDisplayVal');
-    if (tollDispEl) tollDispEl.textContent = m.tollFee;
-    const hwyLabel = document.getElementById('hwyDistLabel');
-    if (hwyLabel) hwyLabel.textContent = `${((m.highwayDistMeters || 0) / 1000).toFixed(2)} km`;
-
-    // 里程 / 車速 / 延滯與雙進度條
-    document.getElementById('distValue').textContent = (m.distMeters / 1000).toFixed(2);
-    const hasTargetTrip = (m.targetTripMeters || 0) > 0;
-    const kmLbl = document.getElementById('kmProgressLabel');
-    if (kmLbl) kmLbl.textContent = hasTargetTrip ? '行程進度' : '每公里進度';
-    const kmPct = hasTargetTrip
-      ? Math.min(100, Math.round((m.distMeters / m.targetTripMeters) * 100))
-      : Math.round(((m.distMeters % 1000) / 1000) * 100);
-    const kmBar = document.getElementById('kmProgressBar');
-    const kmTxt = document.getElementById('kmPctText');
-    const kmCar = document.getElementById('kmCarIcon');
-    if (kmBar) kmBar.style.width = `${kmPct}%`;
-    if (kmTxt) kmTxt.textContent = `${kmPct}%`;
-    if (kmCar) kmCar.style.left = `${Math.min(96, Math.max(4, kmPct))}%`;
-
-    let distPct = m.distMeters <= s.baseDist
-      ? Math.min(100, Math.round((m.distMeters / s.baseDist) * 100))
-      : Math.round((((m.distMeters - s.baseDist) % s.stepDist) / s.stepDist) * 100);
-    document.getElementById('distProgressBar').style.width = `${distPct}%`;
-    document.getElementById('distPctText').textContent = `${distPct}%`;
-
-    document.getElementById('speedValue').textContent = Math.round(currentSpeedKmh);
-    const isUberMode = s.billingMode === 'uber';
-    const waitLabelEl = document.getElementById('waitLabelText');
-    if (waitLabelEl) {
-      waitLabelEl.textContent = isUberMode ? '行車計時' : '延滯計時';
-    }
-    const stepProgressSection = document.getElementById('taxiStepProgressSection');
-    if (stepProgressSection) {
-      stepProgressSection.classList.toggle('hidden', isUberMode);
-    }
-    const displaySeconds = isUberMode ? (m.tripSeconds || 0) : (m.waitSeconds || 0);
-    const mm = String(Math.floor(displaySeconds / 60)).padStart(2, '0');
-    const ss = String(Math.floor(displaySeconds % 60)).padStart(2, '0');
-    document.getElementById('waitValue').textContent = `${mm}:${ss}`;
-    const waitPct = Math.round(((m.waitSeconds % s.waitSec) / s.waitSec) * 100);
-    document.getElementById('waitProgressBar').style.width = `${waitPct}%`;
-    document.getElementById('waitPctText').textContent = `${waitPct}%`;
-
-    const currLabel = detectedRoadName || (lastSmoothPoint ? `${lastSmoothPoint.lat.toFixed(5)}, ${lastSmoothPoint.lon.toFixed(5)}` : '等待定位中...');
-    document.getElementById('meterCurrPosText').textContent = currLabel;
-    const startBoxVal = document.getElementById('inputStartAddr')?.value.trim();
-    document.getElementById('meterStartPosText').textContent = m.running
-      ? (m.tripStartAddr || startBoxVal || currLabel)
-      : (startBoxVal || m.tripStartAddr || currLabel);
-    const endBoxVal = document.getElementById('inputEndAddr')?.value.trim();
-    const endPosEl = document.getElementById('meterEndPosText');
-    if (endPosEl) {
-      endPosEl.textContent = endBoxVal || '尚未設定';
-    }
-
-    applyThemeVisual();
-
-    const btnStart = document.getElementById('btnStartTrip');
-    const activeCtrls = document.getElementById('activeTripControls');
-    const btnPause = document.getElementById('btnPauseTrip');
-    if (!m.running) {
-      btnStart.classList.remove('hidden');
-      activeCtrls.classList.add('hidden');
-    } else {
-      btnStart.classList.add('hidden');
-      activeCtrls.classList.remove('hidden');
-      btnPause.innerHTML = m.paused ? '<span>▶</span><span>繼續計費</span>' : '<span>⏸</span><span>暫停計費</span>';
-    }
-  }
-
-  // 常用地標膠囊渲染與長按刪除（支援簡稱＋完整地址）
   function getLandmarkDisplayName(item) {
     return typeof item === 'string' ? item : (item && item.name) || '';
   }
@@ -1263,215 +1116,739 @@
   }
 
   function renderLandmarkChips() {
-    const box = document.getElementById('landmarkChipsContainer');
+    const container = document.getElementById('landmarkChipsContainer');
+    if (!container) return;
     const isEnd = fillTargetField === 'end';
     const toggleBtn = `
       <button type="button" onclick="toggleFillTarget()" class="px-3.5 py-1.5 rounded-full ${isEnd ? 'bg-rose-600 hover:bg-rose-500 border-rose-400' : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-400'} border text-white text-xs font-black flex items-center gap-1 shadow-md transition active:scale-95">
         <span>${isEnd ? '🔴 選擇終點 ▾' : '🟢 選擇起點 ▾'}</span>
       </button>
     `;
-    const chips = appState.landmarks.map((item, idx) => {
-      const displayName = getLandmarkDisplayName(item);
-      return `
-      <button type="button"
-        onclick="applyLandmarkChip(${idx})"
-        onpointerdown="startLandmarkLongPress(${idx})"
-        onpointerup="cancelLandmarkLongPress()"
-        onpointerleave="cancelLandmarkLongPress()"
-        class="px-3.5 py-1.5 rounded-full bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-bold text-slate-200 transition active:scale-95">
-        ${esc(displayName)}
-      </button>
-    `;
+    const chipsHtml = appState.landmarks.map((lm, idx) => {
+      const label = getLandmarkDisplayName(lm);
+      return `<button type="button" data-idx="${idx}" class="landmark-chip px-3 py-1.5 rounded-full bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-bold text-slate-200 whitespace-nowrap active:scale-95">${esc(label)}</button>`;
     }).join('');
-    const addBtn = `
-      <button type="button" onclick="openAddLandmarkModal()" class="px-3.5 py-1.5 rounded-full bg-emerald-200 hover:bg-emerald-300 text-emerald-950 text-xs font-black shadow-sm transition active:scale-95">
-        + 新增常用點
-      </button>
-    `;
-    box.innerHTML = toggleBtn + chips + addBtn;
+    const addBtn = `<button type="button" onclick="openAddLandmarkModal()" class="px-3 py-1.5 rounded-full bg-emerald-200 hover:bg-emerald-300 text-emerald-950 text-xs font-black whitespace-nowrap shadow-sm active:scale-95">+ 新增常用點</button>`;
+    container.innerHTML = toggleBtn + chipsHtml + addBtn;
+
+    container.querySelectorAll('.landmark-chip').forEach(btn => {
+      let pressTimer = null;
+      let longPressed = false;
+      const idx = Number(btn.getAttribute('data-idx'));
+      const startPress = () => {
+        longPressed = false;
+        pressTimer = setTimeout(() => {
+          longPressed = true;
+          const lm = appState.landmarks[idx];
+          if (!lm) return;
+          openConfirm(`確定要刪除常用地點「${getLandmarkDisplayName(lm)}」嗎？`, () => {
+            appState.landmarks.splice(idx, 1);
+            saveAppState();
+            renderLandmarkChips();
+            toast('已刪除常用地點');
+          });
+        }, 650);
+      };
+      const cancelPress = () => {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      };
+      btn.addEventListener('pointerdown', startPress);
+      btn.addEventListener('pointerup', cancelPress);
+      btn.addEventListener('pointerleave', cancelPress);
+      btn.addEventListener('pointercancel', cancelPress);
+      btn.addEventListener('click', () => {
+        if (longPressed) return;
+        const lm = appState.landmarks[idx];
+        if (!lm) return;
+        const fullAddr = getLandmarkFullAddress(lm);
+        if (fillTargetField === 'end') {
+          const endInp = document.getElementById('inputEndAddr');
+          if (endInp) {
+            boundEndGpsCoords = null;
+            endInp.value = fullAddr;
+            hideAllPoiSuggestBoxes();
+            syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
+            refreshUI();
+            toast(`已選擇終點：${getLandmarkDisplayName(lm)}`);
+          }
+        } else {
+          const startInp = document.getElementById('inputStartAddr');
+          if (startInp) {
+            boundStartGpsCoords = null;
+            startInp.value = fullAddr;
+            hideAllPoiSuggestBoxes();
+            syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
+            refreshUI();
+            toast(`已選擇起點：${getLandmarkDisplayName(lm)}`);
+          }
+        }
+      });
+    });
   }
 
   function toggleFillTarget() {
     fillTargetField = fillTargetField === 'end' ? 'start' : 'end';
     renderLandmarkChips();
-    toast(fillTargetField === 'end' ? '點選地標將選擇「下車終點」' : '點選地標將選擇「上車起點」');
-  }
-
-  let longPressTimer = null;
-  let longPressTriggered = false;
-  function startLandmarkLongPress(idx) {
-    longPressTriggered = false;
-    clearTimeout(longPressTimer);
-    longPressTimer = setTimeout(() => {
-      longPressTriggered = true;
-      const name = getLandmarkDisplayName(appState.landmarks[idx]);
-      openConfirm(`確定要刪除常用點「${name}」嗎？`, () => {
-        appState.landmarks.splice(idx, 1);
-        saveAppState();
-        renderLandmarkChips();
-        toast(`已刪除常用點：${name}`);
-      });
-    }, 650);
-  }
-  function cancelLandmarkLongPress() {
-    clearTimeout(longPressTimer);
-  }
-
-  function applyLandmarkChip(idx) {
-    if (longPressTriggered) return;
-    const item = appState.landmarks[idx];
-    if (!item) return;
-    const displayName = getLandmarkDisplayName(item);
-    const fullAddr = getLandmarkFullAddress(item);
-    if (fillTargetField === 'end') {
-      document.getElementById('inputEndAddr').value = fullAddr;
-      refreshUI();
-      toast(`已選擇終點：${displayName}`);
-    } else {
-      boundStartGpsCoords = null;
-      document.getElementById('inputStartAddr').value = fullAddr;
-      refreshUI();
-      toast(`已選擇起點：${displayName}`);
-    }
+    toast(fillTargetField === 'end' ? '目前常用點模式：填入「🔴 終點」' : '目前常用點模式：填入「🟢 起點」');
   }
 
   function openAddLandmarkModal() {
     const nameInp = document.getElementById('newLandmarkName');
     const addrInp = document.getElementById('newLandmarkAddr');
-    nameInp.value = '';
-    addrInp.value = document.getElementById('inputEndAddr').value.trim() || '';
-    document.getElementById('addLandmarkModal').classList.remove('hidden');
-    setTimeout(() => nameInp.focus(), 50);
+    if (nameInp) nameInp.value = '';
+    if (addrInp) addrInp.value = '';
+    const modal = document.getElementById('addLandmarkModal');
+    if (modal) modal.classList.remove('hidden');
+    if (nameInp) setTimeout(() => nameInp.focus(), 50);
   }
 
   function saveNewLandmark() {
-    const cleanName = document.getElementById('newLandmarkName').value.trim();
-    const cleanAddr = document.getElementById('newLandmarkAddr').value.trim();
-    if (!cleanName && !cleanAddr) {
-      toast('請至少輸入顯示簡稱或完整地址');
+    const name = document.getElementById('newLandmarkName')?.value.trim() || '';
+    const addr = document.getElementById('newLandmarkAddr')?.value.trim() || '';
+    if (!name && !addr) {
+      toast('請至少輸入地點名稱或完整地址');
       return;
     }
-    const finalName = cleanName || cleanAddr;
-    const finalAddr = cleanAddr || cleanName;
-    const existIdx = appState.landmarks.findIndex(x => getLandmarkDisplayName(x) === finalName);
-    if (existIdx >= 0) {
-      appState.landmarks[existIdx] = { name: finalName, addr: finalAddr };
-    } else {
-      appState.landmarks.push({ name: finalName, addr: finalAddr });
+    const finalName = name || addr;
+    const finalAddr = addr || name;
+    appState.landmarks.push({ name: finalName, addr: finalAddr });
+    if (addr && name && addr !== name) {
+      rememberCompanyMapping(name, addr, null, null);
     }
     saveAppState();
     renderLandmarkChips();
     closeModal('addLandmarkModal');
-    toast(`已儲存常用點：${finalName}`);
+    toast(`✅ 已新增常用地點：${finalName}`);
   }
 
-  function openCustomTollModal(target) {
-    openCustomInput('請輸入國道通行費金額（元）', 20, 'number', val => {
-      if (target === 'checkout') addCheckoutToll(val);
+  function hideAllPoiSuggestBoxes() {
+    const sBox = document.getElementById('startPoiSuggestBox');
+    const eBox = document.getElementById('endPoiSuggestBox');
+    if (sBox) sBox.classList.add('hidden');
+    if (eBox) eBox.classList.add('hidden');
+  }
+
+  function sanitizeTaiwanAddress(raw) {
+    let s = String(raw || '').trim();
+    const innerMatch = s.match(/[（(]([^()（）]+)[)）]$/);
+    if (innerMatch) s = innerMatch[1].trim();
+    s = s.replace(/^台灣|^臺灣/, '').trim();
+    // 移除中文字與數字/符號之間的多餘空白（例如「中央路三段 38 號」→「中央路三段38號」）
+    s = s.replace(/([\u4e00-\u9fa5\d\-－之])\s+(?=[\u4e00-\u9fa5\d\-－之號樓層F室巷弄段])/g, '$1');
+    s = s.replace(/\s+/g, ' ').trim();
+    return s;
+  }
+
+  function rememberCompanyMapping(alias, fullAddr, lat, lon) {
+    const cleanAlias = String(alias || '').replace(/[（(][^()（）]+[)）]$/, '').trim();
+    const cleanAddr = sanitizeTaiwanAddress(fullAddr);
+    if (!cleanAlias || !cleanAddr) return;
+    if (!Array.isArray(appState.companyCache)) appState.companyCache = [];
+    const idx = appState.companyCache.findIndex(x => x.alias === cleanAlias);
+    const entry = {
+      alias: cleanAlias,
+      addr: cleanAddr,
+      lat: typeof lat === 'number' && !isNaN(lat) ? lat : null,
+      lon: typeof lon === 'number' && !isNaN(lon) ? lon : null,
+      updatedAt: Date.now()
+    };
+    if (idx >= 0) {
+      appState.companyCache[idx] = entry;
+    } else {
+      appState.companyCache.unshift(entry);
+      if (appState.companyCache.length > 120) appState.companyCache.length = 120;
+    }
+    saveAppState();
+  }
+
+  function onRouteInputFocus(which) {
+    const inp = document.getElementById(which === 'start' ? 'inputStartAddr' : 'inputEndAddr');
+    if (inp && inp.value.trim().length >= 2) {
+      triggerPoiSuggestSearch(which, inp.value.trim());
+    }
+  }
+
+  function onStartAddrManualInput() {
+    boundStartGpsCoords = null;
+    const val = document.getElementById('inputStartAddr')?.value.trim() || '';
+    syncRouteDraftToStorage({ lastSearchWhich: val.length >= 2 ? 'start' : '', lastSearchQuery: val.length >= 2 ? val : '' });
+    refreshUI();
+    clearTimeout(poiSearchTimers.start);
+    if (val.length < 2) {
+      const sBox = document.getElementById('startPoiSuggestBox');
+      if (sBox) sBox.classList.add('hidden');
+      return;
+    }
+    poiSearchTimers.start = setTimeout(() => triggerPoiSuggestSearch('start', val), 380);
+  }
+
+  function onEndAddrManualInput() {
+    boundEndGpsCoords = null;
+    const val = document.getElementById('inputEndAddr')?.value.trim() || '';
+    syncRouteDraftToStorage({ lastSearchWhich: val.length >= 2 ? 'end' : '', lastSearchQuery: val.length >= 2 ? val : '' });
+    refreshUI();
+    clearTimeout(poiSearchTimers.end);
+    if (val.length < 2) {
+      const eBox = document.getElementById('endPoiSuggestBox');
+      if (eBox) eBox.classList.add('hidden');
+      return;
+    }
+    poiSearchTimers.end = setTimeout(() => triggerPoiSuggestSearch('end', val), 380);
+  }
+
+  async function triggerPoiSuggestSearch(which, query) {
+    const box = document.getElementById(which === 'start' ? 'startPoiSuggestBox' : 'endPoiSuggestBox');
+    if (!box) return;
+    const normQ = query.replace(/\s+/g, '').toLowerCase();
+    const candidates = [];
+    const seenKeys = new Set();
+
+    (appState.companyCache || []).forEach(item => {
+      if (item.alias.toLowerCase().includes(normQ) || item.addr.toLowerCase().includes(normQ)) {
+        const key = `${item.alias}|${item.addr}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          candidates.push({
+            source: 'memory',
+            title: item.alias,
+            addr: item.addr,
+            lat: item.lat,
+            lon: item.lon,
+            rawQuery: query
+          });
+        }
+      }
+    });
+
+    (appState.landmarks || []).forEach(lm => {
+      const name = getLandmarkDisplayName(lm);
+      const addr = getLandmarkFullAddress(lm);
+      if (name.toLowerCase().includes(normQ) || addr.toLowerCase().includes(normQ)) {
+        const key = `${name}|${addr}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          candidates.push({
+            source: 'landmark',
+            title: name,
+            addr: addr,
+            lat: null,
+            lon: null,
+            rawQuery: query
+          });
+        }
+      }
+    });
+
+    renderPoiSuggestBox(which, query, candidates, true);
+
+    const biasLat = lastSmoothPoint ? lastSmoothPoint.lat : 24.9333;
+    const biasLon = lastSmoothPoint ? lastSmoothPoint.lon : 121.3694;
+    const localCityPrefix = (detectedRoadName.match(/^(.{2,3}[市縣])/) || [])[1] || '';
+    const cjkChars = Array.from(new Set((query.match(/[\u4e00-\u9fa5]/g) || [])));
+
+    const isRelevantResult = (titleStr, addrStr) => {
+      const combined = `${titleStr || ''} ${addrStr || ''}`.replace(/\s+/g, '').toLowerCase();
+      if (combined.includes(normQ)) return true;
+      if (cjkChars.length >= 2) {
+        return cjkChars.every(ch => combined.includes(ch));
+      }
+      return false;
+    };
+
+    const fetchPhoton = async () => {
+      try {
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${biasLat}&lon=${biasLon}&limit=10`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.features || []).filter(f => {
+          const cc = (f.properties && f.properties.countrycode) || '';
+          return !cc || cc.toUpperCase() === 'TW';
+        }).map(f => {
+          const p = f.properties || {};
+          const [lon, lat] = f.geometry?.coordinates || [null, null];
+          const title = p.name || p.street || '';
+          const composedAddr = [p.county || p.city || p.state || '', p.district || p.locality || '', p.street || '', p.housenumber ? `${p.housenumber}號` : ''].filter(Boolean).join('');
+          return {
+            source: 'online',
+            title: title || composedAddr,
+            addr: composedAddr || title,
+            lat: typeof lat === 'number' ? lat : null,
+            lon: typeof lon === 'number' ? lon : null,
+            rawQuery: query
+          };
+        }).filter(item => isRelevantResult(item.title, item.addr));
+      } catch (e) { return []; }
+    };
+
+    const fetchNominatim = async (searchStr) => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(searchStr)}&countrycodes=tw&addressdetails=1&limit=8&accept-language=zh-TW`);
+        if (!res.ok) return [];
+        const arr = await res.json();
+        return (arr || []).map(item => {
+          const a = item.address || {};
+          const title = item.name || a.amenity || a.shop || a.office || a.building || a.road || '';
+          const city = a.city || a.county || '';
+          const dist = a.suburb || a.town || a.city_district || '';
+          const road = a.road || '';
+          const house = a.house_number ? `${String(a.house_number).replace(/號+$/g, '')}號` : '';
+          const composedAddr = [city, dist, road, house].filter(Boolean).join('') || item.display_name?.split(',').slice(0, 3).reverse().join('') || title;
+          return {
+            source: 'online',
+            title: title || composedAddr,
+            addr: composedAddr,
+            lat: Number(item.lat),
+            lon: Number(item.lon),
+            rawQuery: query
+          };
+        }).filter(item => isRelevantResult(item.title, item.addr));
+      } catch (e) { return []; }
+    };
+
+    const queriesToRun = [fetchPhoton(), fetchNominatim(query)];
+    if (localCityPrefix && !query.includes(localCityPrefix)) {
+      queriesToRun.push(fetchNominatim(`${localCityPrefix} ${query}`));
+    }
+
+    const resultGroups = await Promise.all(queriesToRun);
+    const currentInputVal = (document.getElementById(which === 'start' ? 'inputStartAddr' : 'inputEndAddr')?.value.trim()) || '';
+    if (currentInputVal !== query) return;
+
+    resultGroups.flat().forEach(c => {
+      const key = `${c.title}|${c.addr}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        candidates.push(c);
+      }
+    });
+
+    if (lastSmoothPoint) {
+      candidates.sort((a, b) => {
+        if (a.source !== 'online' && b.source === 'online') return -1;
+        if (a.source === 'online' && b.source !== 'online') return 1;
+        if (a.lat && a.lon && b.lat && b.lon) {
+          const da = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, a.lat, a.lon);
+          const db = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, b.lat, b.lon);
+          return da - db;
+        }
+        return 0;
+      });
+    }
+
+    renderPoiSuggestBox(which, query, candidates.slice(0, 6), false);
+  }
+
+  function renderPoiSuggestBox(which, query, list, isLoading) {
+    const box = document.getElementById(which === 'start' ? 'startPoiSuggestBox' : 'endPoiSuggestBox');
+    if (!box) return;
+    poiCandidatesMap[which] = list;
+    const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query + ' 地址')}`;
+
+    const headerHtml = `
+      <div class="flex items-center justify-between px-1.5 py-0.5 text-[11px] text-slate-400">
+        <span>${isLoading ? '⏳ 正在搜尋台灣公司與地標地址...' : '🔎 點選下方地點自動帶入完整地址：'}</span>
+        <button type="button" onclick="hideAllPoiSuggestBoxes()" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold whitespace-nowrap shrink-0">✕ 關閉</button>
+      </div>
+    `;
+
+    const itemsHtml = list.length === 0
+      ? (isLoading ? '' : `<div class="px-2 py-1.5 text-[11px] text-slate-400">地圖庫暫無「${esc(query)}」建檔，可點下方按鈕用 Google 查完整門牌後貼上：</div>`)
+      : list.map((c, idx) => {
+          const tag = c.source === 'memory'
+            ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black shrink-0">已記憶</span>'
+            : (c.source === 'landmark'
+              ? '<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black shrink-0">常用點</span>'
+              : '<span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-black shrink-0">地標</span>');
+          const distTag = (lastSmoothPoint && c.lat && c.lon)
+            ? `<span class="text-[10px] text-slate-400 shrink-0">${(haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, c.lat, c.lon) / 1000).toFixed(1)} km</span>`
+            : '';
+          const coordBadge = (typeof c.lat === 'number' && typeof c.lon === 'number' && !isNaN(c.lat))
+            ? '<span class="text-[10px] text-emerald-400 font-bold shrink-0">🎯 精準座標</span>'
+            : '';
+          return `
+            <div class="w-full p-2.5 rounded-xl bg-[#151e32] hover:bg-slate-800 border border-slate-700/70 transition flex items-center justify-between gap-2">
+              <button type="button" onclick="selectPoiCandidate('${which}', ${idx})" class="flex-1 min-w-0 text-left space-y-1 active:scale-[0.99]">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  ${tag}
+                  <span class="font-black text-sm text-slate-100 truncate">${esc(c.title)}</span>
+                </div>
+                ${(coordBadge || distTag) ? `<div class="flex items-center gap-2 pl-0.5">${coordBadge}${distTag}</div>` : ''}
+                <div class="text-[11px] text-slate-300 leading-snug break-all pl-0.5">📍 ${esc(c.addr)}</div>
+              </button>
+              <button type="button" onclick="editPoiCandidateAddress('${which}', ${idx})" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-black text-amber-300 whitespace-nowrap shrink-0 active:scale-95">
+                ✏️ 補門牌
+              </button>
+            </div>
+          `;
+        }).join('');
+
+    const footerHtml = `
+      <div class="mt-1 space-y-1.5">
+        <a href="${googleSearchUrl}" target="_blank" rel="noopener noreferrer" class="w-full py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/80 text-[11px] font-black text-amber-300 flex items-center justify-center gap-1.5">
+          <span>🌐</span><span>1. 用 Google 搜尋「${esc(query)}」查門牌地址</span>
+        </a>
+        <button type="button" onclick="pasteClipboardAndBindMerchant('${which}', '${esc(query).replace(/'/g, "\\'")}')" class="w-full py-2 px-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 border border-emerald-400/60 text-[11px] font-black text-white flex items-center justify-center gap-1.5 shadow active:scale-[0.99]">
+          <span>📋</span><span>2. 貼上複製的門牌或地圖連結，永久記住「${esc(query)}」</span>
+        </button>
+      </div>
+    `;
+
+    box.innerHTML = headerHtml + itemsHtml + footerHtml;
+    box.classList.remove('hidden');
+  }
+
+  function selectPoiCandidate(which, idx) {
+    const list = poiCandidatesMap[which] || [];
+    const item = list[idx];
+    if (!item) return;
+    hideAllPoiSuggestBoxes();
+    const inp = document.getElementById(which === 'start' ? 'inputStartAddr' : 'inputEndAddr');
+    const cleanTitle = String(item.title || '').replace(/[（(][^()（）]+[)）]$/, '').trim();
+    const pureAddr = sanitizeTaiwanAddress(item.addr) || cleanTitle;
+    if (inp) inp.value = pureAddr;
+    const hasCoords = (typeof item.lat === 'number' && typeof item.lon === 'number' && !isNaN(item.lat) && !isNaN(item.lon));
+    if (which === 'start') {
+      boundStartGpsCoords = hasCoords ? { lat: item.lat, lon: item.lon } : null;
+    } else {
+      boundEndGpsCoords = hasCoords ? { lat: item.lat, lon: item.lon } : null;
+    }
+    if (cleanTitle && pureAddr && cleanTitle !== pureAddr) {
+      rememberCompanyMapping(cleanTitle, pureAddr, hasCoords ? item.lat : null, hasCoords ? item.lon : null);
+    }
+    const cleanRawQ = String(item.rawQuery || '').replace(/[（(][^()（）]+[)）]$/, '').trim();
+    if (cleanRawQ && cleanRawQ !== cleanTitle && cleanRawQ !== pureAddr) {
+      rememberCompanyMapping(cleanRawQ, pureAddr, hasCoords ? item.lat : null, hasCoords ? item.lon : null);
+    }
+    syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
+    refreshUI();
+    toast(`✅ 已帶入地址：${pureAddr}`);
+  }
+
+  function editPoiCandidateAddress(which, idx) {
+    const list = poiCandidatesMap[which] || [];
+    const item = list[idx];
+    if (!item) return;
+    const labelName = String(item.title || item.rawQuery || '此地點').replace(/[（(][^()（）]+[)）]$/, '').trim();
+    const defaultAddr = sanitizeTaiwanAddress(item.addr || item.title || '');
+    openCustomInput(`補齊或修改「${labelName}」門牌地址`, defaultAddr, 'text', val => {
+      const editedAddr = sanitizeTaiwanAddress(val);
+      if (!editedAddr) return;
+      hideAllPoiSuggestBoxes();
+      const inp = document.getElementById(which === 'start' ? 'inputStartAddr' : 'inputEndAddr');
+      if (inp) inp.value = editedAddr;
+      if (which === 'start') boundStartGpsCoords = null;
+      else boundEndGpsCoords = null;
+      if (labelName && labelName !== editedAddr) {
+        rememberCompanyMapping(labelName, editedAddr, null, null);
+      }
+      const cleanRawQ = String(item.rawQuery || '').replace(/[（(][^()（）]+[)）]$/, '').trim();
+      if (cleanRawQ && cleanRawQ !== labelName && cleanRawQ !== editedAddr) {
+        rememberCompanyMapping(cleanRawQ, editedAddr, null, null);
+      }
+      syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
+      refreshUI();
+      toast(`✅ 已補齊門牌並記住「${labelName}」：${editedAddr}`);
     });
   }
 
-  function toggleAutoRoad() {
-    appState.meter.autoRoad = !appState.meter.autoRoad;
-    appState.meter.manualLockUntil = 0;
-    if (appState.meter.autoRoad) {
-      appState.meter.roadMode = isOnTollFreeway135 ? 'highway' : 'local';
-    }
-    saveAppState();
-    refreshUI();
-    toast(appState.meter.autoRoad
-      ? `已切回「自動感應：開」（目前為${appState.meter.roadMode === 'highway' ? '高速公路' : '一般道路'}）`
-      : '已切為「手動切換：開」，可自由切換一般／高速公路');
+  function extractCoordsFromTextOrUrl(rawStr) {
+    const s = String(rawStr || '').trim();
+    const atMatch = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const qCoordMatch = s.match(/[?&](?:q|query|ll|destination)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const bangMatch = s.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    const plainCoordMatch = s.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+    const m = atMatch || qCoordMatch || bangMatch || plainCoordMatch;
+    if (!m) return null;
+    const lat = Number(m[1]);
+    const lon = Number(m[2]);
+    if (isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    return { lat, lon };
   }
 
-  function manualSetRoadMode(mode) {
-    if (appState.meter.autoRoad) {
-      toast('目前為「自動感應」模式，請先點上方切換為手動才能選擇道路');
+  async function applyBoundMerchantAddress(which, merchantAlias, pastedRaw) {
+    const cleanPasted = String(pastedRaw || '').trim();
+    const cleanAlias = String(merchantAlias || '').replace(/[（(][^()（）]+[)）]$/, '').trim();
+    if (!cleanPasted) return;
+    hideAllPoiSuggestBoxes();
+    const inp = document.getElementById(which === 'start' ? 'inputStartAddr' : 'inputEndAddr');
+
+    const extractedCoords = extractCoordsFromTextOrUrl(cleanPasted);
+    if (extractedCoords) {
+      toast('已解析地圖座標，正在反查台灣完整門牌...');
+      const revAddr = await reverseGeocodeLabel(extractedCoords.lat, extractedCoords.lon);
+      const pureAddr = sanitizeTaiwanAddress(revAddr) || `${extractedCoords.lat.toFixed(5)}, ${extractedCoords.lon.toFixed(5)}`;
+      if (inp) inp.value = pureAddr;
+      if (which === 'start') boundStartGpsCoords = extractedCoords;
+      else boundEndGpsCoords = extractedCoords;
+      if (cleanAlias && cleanAlias !== cleanPasted && cleanAlias !== pureAddr) {
+        rememberCompanyMapping(cleanAlias, pureAddr, extractedCoords.lat, extractedCoords.lon);
+      }
+      syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
+      refreshUI();
+      toast(`✅ 已綁定「${cleanAlias || '目標地點'}」地址：${pureAddr}`);
       return;
     }
-    appState.meter.roadMode = mode;
-    appState.meter.manualLockUntil = 0;
-    saveAppState();
-    refreshUI();
-    toast(mode === 'highway' ? '已手動切換：高速公路（自動計 eTag）' : '已手動切換：一般道路');
-  }
 
-  function isPaidNationalFreeway135(roadStr) {
-    if (!roadStr) return false;
-    const s = roadStr.replace(/\s+/g, '');
-    if (/國道?[2468]號?|國道?10號?|台\d+/.test(s)) return false;
-    return /(國道?1號?|國道?3號?|國道?5號?|國1|國3|國5|中山高速公路|福爾摩沙高速公路|蔣渭水高速公路|五楊高架|汐五高架|雪山隧道|FreewayNo\.[135]|NationalHighway[135])/i.test(s);
-  }
-
-  async function reverseGeocodeLabel(lat, lon) {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=zh-TW`);
-      if (res.ok) {
-        const data = await res.json();
-        const addr = data.address || {};
-        const city = addr.city || addr.county || '';
-        const district = addr.suburb || addr.town || addr.city_district || '';
-        const road = addr.road || addr.highway || data.name || '';
-        const cleanHouseNum = addr.house_number ? String(addr.house_number).trim().replace(/號+$/g, '') : '';
-        const house = cleanHouseNum ? `${cleanHouseNum}號` : '';
-        const refTag = data.extratags?.ref || addr.state_district || '';
-        const roadCheckPool = [road, data.name, refTag, data.display_name].filter(Boolean).join(' ');
-        const hitFreeway = isPaidNationalFreeway135(roadCheckPool);
-        if (hitFreeway) {
-          isOnTollFreeway135 = true;
-          nonFreewayStreak = 0;
-        } else {
-          nonFreewayStreak += 1;
-          // 高架橋經過下方平面道路防抖：需連續 3 次偵測非國道且車速低於 65 km/h（真正下交流道）才切回一般道路
-          if (nonFreewayStreak >= 3 && currentSpeedKmh < 65) {
-            isOnTollFreeway135 = false;
-          }
-        }
-
-        const fullLabel = [city, district, road ? ` ${road}${house}` : ''].join('').trim().replace(/號{2,}/g, '號');
-        if (fullLabel) return fullLabel;
-      }
-    } catch (e) {}
-
-    try {
-      const bRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh-Hant`);
-      if (bRes.ok) {
-        const bData = await bRes.json();
-        const city = bData.city || bData.principalSubdivision || '';
-        const locality = bData.locality || '';
-        const label = [city, locality].filter(Boolean).join('');
-        if (label) {
-          const hitFreeway = isPaidNationalFreeway135(label);
-          if (hitFreeway) {
-            isOnTollFreeway135 = true;
-            nonFreewayStreak = 0;
-          } else {
-            nonFreewayStreak += 1;
-            if (nonFreewayStreak >= 3 && currentSpeedKmh < 65) {
-              isOnTollFreeway135 = false;
-            }
-          }
-          return label;
-        }
-      }
-    } catch (e) {}
-
-    return '';
-  }
-
-  async function checkGeoRoad(lat, lon) {
-    const now = Date.now();
-    const intervalMs = (appState.meter.running || currentSpeedKmh >= 45) ? 5000 : 10000;
-    if (now - lastRoadQueryTs < intervalMs) return;
-    lastRoadQueryTs = now;
-    const fullLabel = await reverseGeocodeLabel(lat, lon);
-    if (fullLabel) {
-      detectedRoadName = fullLabel;
-      if (!appState.meter.running) {
-        appState.meter.tripStartAddr = fullLabel;
-      }
-      refreshUI();
+    const cleanAddr = sanitizeTaiwanAddress(cleanPasted);
+    if (inp) inp.value = cleanAddr;
+    if (which === 'start') boundStartGpsCoords = null;
+    else boundEndGpsCoords = null;
+    if (cleanAlias && cleanAlias !== cleanAddr) {
+      rememberCompanyMapping(cleanAlias, cleanAddr, null, null);
     }
+    syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
+    refreshUI();
+    toast(`✅ 已記住「${cleanAlias || '商家'}」地址：${cleanAddr}`);
+  }
+
+  async function pasteClipboardAndBindMerchant(which, merchantAlias) {
+    let clipText = '';
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        clipText = await navigator.clipboard.readText();
+      }
+    } catch (e) {}
+
+    if (clipText && clipText.trim()) {
+      await applyBoundMerchantAddress(which, merchantAlias, clipText.trim());
+    } else {
+      openCustomInput(`請貼上「${merchantAlias}」的門牌或 Google 地圖連結`, '', 'text', async val => {
+        if (val && val.trim()) {
+          await applyBoundMerchantAddress(which, merchantAlias, val.trim());
+        }
+      });
+    }
+  }
+
+  function isNightHour() {
+    if (appState.settings.nightMode === 'off') return false;
+    const h = new Date().getHours();
+    return h >= 23 || h < 6;
+  }
+
+  function applyAutoTheme() {
+    const mode = appState.settings.themeMode || 'auto';
+    let useLight = false;
+    if (mode === 'light') {
+      useLight = true;
+    } else if (mode === 'dark') {
+      useLight = false;
+    } else {
+      const h = new Date().getHours();
+      useLight = (h >= 6 && h < 18);
+    }
+    document.body.classList.toggle('theme-light', useLight);
+  }
+
+  function computeCurrentFare() {
+    const s = appState.settings;
+    const m = appState.meter;
+    const dist = m.distMeters || 0;
+    const wait = m.waitSeconds || 0;
+    const tripMin = (m.tripSeconds || 0) / 60;
+    const hwyKm = (m.highwayDistMeters || 0) / 1000;
+    const autoEtag = Math.round(hwyKm * ETAG_RATE_PER_KM);
+    const tollFee = autoEtag + (m.manualTollFee || 0);
+    m.tollFee = tollFee;
+
+    let meterFare = 0;
+    let distSteps = 0;
+    let waitSteps = 0;
+    let remDistPct = 0;
+    let remWaitPct = 0;
+
+    if (s.billingMode === 'uber') {
+      const surge = Math.max(1, Number(s.uberSurge) || 1);
+      const uBase = Number(s.uberBase) || 48;
+      const uMin = Number(s.uberMin) || 85;
+      const uKm = Number(s.uberPerKm) || 25;
+      const uMinRate = Number(s.uberPerMin) || 3.4;
+      const uFee = Number(s.uberServiceFee) || 0;
+      const rawFare = (uBase + (dist / 1000) * uKm + tripMin * uMinRate) * surge;
+      meterFare = Math.round(Math.max(uMin, rawFare) + uFee);
+      remDistPct = Math.round(((dist % 1000) / 1000) * 100);
+      remWaitPct = Math.round(((m.tripSeconds % 60) / 60) * 100);
+    } else {
+      const baseTotal = s.baseFare + (isNightHour() ? s.nightAdd : 0);
+      if (dist > s.baseDist) {
+        const extraDist = dist - s.baseDist;
+        distSteps = Math.floor(extraDist / s.stepDist) + 1;
+        remDistPct = Math.round(((extraDist % s.stepDist) / s.stepDist) * 100);
+      } else {
+        remDistPct = Math.round((dist / Math.max(1, s.baseDist)) * 100);
+      }
+      if (wait > 0 && s.waitSec > 0) {
+        waitSteps = Math.floor(wait / s.waitSec);
+        remWaitPct = Math.round(((wait % s.waitSec) / s.waitSec) * 100);
+      }
+      meterFare = baseTotal + (distSteps + waitSteps) * s.stepFare;
+    }
+
+    const totalJumps = distSteps + waitSteps;
+    if (m.running && totalJumps > (m.jumpCount || 0)) {
+      m.jumpCount = totalJumps;
+      playMeterSound('jump');
+    }
+
+    return {
+      meterFare,
+      tollFee,
+      totalFare: meterFare + tollFee,
+      remDistPct: Math.min(100, Math.max(0, remDistPct)),
+      remWaitPct: Math.min(100, Math.max(0, remWaitPct))
+    };
+  }
+
+  function refreshUI() {
+    applyAutoTheme();
+    const s = appState.settings;
+    const m = appState.meter;
+    const f = computeCurrentFare();
+
+    const rateTag = document.getElementById('ratePeriodTag');
+    if (rateTag) {
+      if (s.billingMode === 'uber') {
+        rateTag.innerHTML = '<span>🚗</span><span class="truncate">平台雙計制</span>';
+      } else if (isNightHour()) {
+        rateTag.innerHTML = `<span>🌙</span><span class="truncate">夜間加成 (+$${s.nightAdd})</span>`;
+      } else {
+        rateTag.innerHTML = '<span>☀️</span><span class="truncate">日間費率</span>';
+      }
+    }
+
+    const tariffLabel = document.getElementById('tariffTypeLabel');
+    if (tariffLabel) {
+      tariffLabel.textContent = s.billingMode === 'uber'
+        ? '雙平台費率'
+        : '一般費率';
+      tariffLabel.title = '點此調整費率設定';
+      tariffLabel.classList.add('cursor-pointer', 'hover:text-amber-400');
+      tariffLabel.onclick = () => openSettingsModal();
+    }
+
+    const fareEl = document.getElementById('fareAmount');
+    if (fareEl) fareEl.textContent = f.totalFare;
+
+    const pillEmpty = document.getElementById('pillEmpty');
+    const pillActive = document.getElementById('pillActive');
+    const pillPaused = document.getElementById('pillPaused');
+    if (pillEmpty && pillActive && pillPaused) {
+      const inactivePill = 'px-2.5 py-1 rounded-xl text-xs font-black bg-[#1e293b] text-slate-400 border border-slate-700 whitespace-nowrap';
+      pillEmpty.className = !m.running ? 'px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-600 text-white whitespace-nowrap shadow-sm' : inactivePill;
+      pillActive.className = (m.running && !m.paused) ? 'px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 whitespace-nowrap shadow-sm' : inactivePill;
+      pillPaused.className = (m.running && m.paused) ? 'px-2.5 py-1 rounded-xl text-xs font-black bg-rose-600 text-white whitespace-nowrap shadow-sm' : inactivePill;
+    }
+
+    const btnStart = document.getElementById('btnStartTrip');
+    const activeCtrls = document.getElementById('activeTripControls');
+    const btnPause = document.getElementById('btnPauseTrip');
+    if (btnStart && activeCtrls) {
+      btnStart.classList.toggle('hidden', m.running);
+      activeCtrls.classList.toggle('hidden', !m.running);
+    }
+    if (btnPause) {
+      btnPause.innerHTML = m.paused ? '<span>▶</span><span>繼續計費</span>' : '<span>⏸</span><span>暫停計費</span>';
+    }
+
+    const btnAutoRoad = document.getElementById('btnAutoRoad');
+    const btnAutoRoadLabel = document.getElementById('btnAutoRoadLabel');
+    if (btnAutoRoad && btnAutoRoadLabel) {
+      btnAutoRoadLabel.textContent = m.autoRoad ? '自動感應：開' : '手動切換：開';
+      btnAutoRoad.className = m.autoRoad
+        ? 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-black bg-sky-950/90 text-sky-300 border border-sky-500/60 whitespace-nowrap shrink-0 active:scale-95'
+        : 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-400/60 whitespace-nowrap shrink-0 active:scale-95';
+    }
+
+    const btnLocal = document.getElementById('btnLocalRoad');
+    const btnHwy = document.getElementById('btnHighwayRoad');
+    if (btnLocal && btnHwy) {
+      const isHwy = m.roadMode === 'highway';
+      const lockedByAuto = Boolean(m.autoRoad);
+      btnLocal.disabled = lockedByAuto;
+      btnHwy.disabled = lockedByAuto;
+      const lockStyle = lockedByAuto ? ' opacity-70 cursor-not-allowed' : ' active:scale-95';
+      btnLocal.className = (!isHwy
+        ? 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-sky-600 text-white border border-sky-400 shadow-md flex items-center justify-center gap-1 whitespace-nowrap transition'
+        : 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-[#1e293b] text-slate-300 border border-slate-700 flex items-center justify-center gap-1 whitespace-nowrap transition') + lockStyle;
+      btnHwy.className = (isHwy
+        ? 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-sky-600 text-white border border-sky-400 shadow-md flex items-center justify-center gap-1 whitespace-nowrap transition'
+        : 'py-2.5 px-1.5 rounded-2xl text-xs sm:text-sm font-black bg-[#1e293b] text-slate-300 border border-slate-700 flex items-center justify-center gap-1 whitespace-nowrap transition') + lockStyle;
+    }
+
+    const currPosEl = document.getElementById('meterCurrPosText');
+    const startPosEl = document.getElementById('meterStartPosText');
+    const endPosEl = document.getElementById('meterEndPosText');
+    const startVal = document.getElementById('inputStartAddr')?.value.trim() || '';
+    const endVal = document.getElementById('inputEndAddr')?.value.trim() || '';
+    if (currPosEl) currPosEl.textContent = detectedRoadName || '等待定位中...';
+    if (startPosEl) startPosEl.textContent = (m.running && m.tripStartAddr) ? m.tripStartAddr : (startVal || detectedRoadName || '尚未定位');
+    if (endPosEl) endPosEl.textContent = endVal || '尚未設定';
+
+    const tollEl = document.getElementById('tollDisplayVal');
+    const hwyLabel = document.getElementById('hwyDistLabel');
+    if (tollEl) tollEl.textContent = f.tollFee;
+    if (hwyLabel) hwyLabel.textContent = `${((m.highwayDistMeters || 0) / 1000).toFixed(2)} km`;
+
+    const distEl = document.getElementById('distValue');
+    const speedEl = document.getElementById('speedValue');
+    const waitLabelEl = document.getElementById('waitLabelText');
+    const waitEl = document.getElementById('waitValue');
+    if (distEl) distEl.textContent = ((m.distMeters || 0) / 1000).toFixed(2);
+    if (speedEl) speedEl.textContent = Math.round(currentSpeedKmh || 0);
+
+    const displaySec = s.billingMode === 'uber' ? (m.tripSeconds || 0) : (m.waitSeconds || 0);
+    const mm = String(Math.floor(displaySec / 60)).padStart(2, '0');
+    const ss = String(displaySec % 60).padStart(2, '0');
+    if (waitLabelEl) waitLabelEl.textContent = s.billingMode === 'uber' ? '行車時間' : '延滯計時';
+    if (waitEl) waitEl.textContent = `${mm}:${ss}`;
+
+    const kmBar = document.getElementById('kmProgressBar');
+    const kmCar = document.getElementById('kmCarIcon');
+    const kmPctEl = document.getElementById('kmPctText');
+    const kmLabelEl = document.getElementById('kmProgressLabel');
+    let kmPct = 0;
+    if (m.targetTripMeters && m.targetTripMeters > 0) {
+      if (kmLabelEl) kmLabelEl.textContent = '行程進度';
+      kmPct = Math.min(100, Math.round(((m.distMeters || 0) / m.targetTripMeters) * 100));
+    } else {
+      if (kmLabelEl) kmLabelEl.textContent = '每公里進度';
+      kmPct = Math.min(100, Math.round((((m.distMeters || 0) % 1000) / 1000) * 100));
+    }
+    if (kmBar) kmBar.style.width = `${kmPct}%`;
+    if (kmCar) kmCar.style.left = `${Math.max(4, Math.min(96, kmPct))}%`;
+    if (kmPctEl) kmPctEl.textContent = `${kmPct}%`;
+
+    const distBar = document.getElementById('distProgressBar');
+    const distPct = document.getElementById('distPctText');
+    const waitBar = document.getElementById('waitProgressBar');
+    const waitPct = document.getElementById('waitPctText');
+    const stepProgressSection = document.getElementById('taxiStepProgressSection');
+    if (stepProgressSection) stepProgressSection.classList.toggle('hidden', s.billingMode === 'uber');
+    if (distBar) distBar.style.width = `${f.remDistPct}%`;
+    if (distPct) distPct.textContent = `${f.remDistPct}%`;
+    if (waitBar) waitBar.style.width = `${f.remWaitPct}%`;
+    if (waitPct) waitPct.textContent = `${f.remWaitPct}%`;
+  }
+
+  function promptResumeInterruptedTrip() {
+    if (!pendingInterruptedMeter) return;
+    const saved = pendingInterruptedMeter;
+    pendingInterruptedMeter = null;
+    const kmStr = ((Number(saved.distMeters) || 0) / 1000).toFixed(2);
+    openConfirm(`偵測到上次尚未結算的載客行程（已行駛 ${kmStr} km），是否恢復繼續跳錶？`, () => {
+      appState.meter = {
+        ...appState.meter,
+        ...saved,
+        running: true,
+        paused: false
+      };
+      saveAppState();
+      refreshUI();
+      toast('已恢復上次未結算的跳錶行程');
+    });
   }
 
   function startTrip() {
@@ -1503,6 +1880,144 @@
     refreshUI();
     playMeterSound('jump');
     toast(appState.settings.billingMode === 'uber' ? '已開始載客（平台里程＋時間雙計）' : '已開始載客跳錶');
+  }
+
+  function toggleAutoRoad() {
+    const m = appState.meter;
+    m.autoRoad = !m.autoRoad;
+    m.manualLockUntil = 0;
+    saveAppState();
+    refreshUI();
+    toast(m.autoRoad ? '已開啟「國道自動感應」' : '已切換為「手動切換道路模式」');
+  }
+
+  function manualSetRoadMode(mode) {
+    const m = appState.meter;
+    if (m.autoRoad) {
+      toast('目前為「自動感應：開」，請先點上方切換為「手動切換：開」再手動選擇');
+      return;
+    }
+    const targetMode = mode === 'highway' ? 'highway' : 'local';
+    if (m.roadMode !== targetMode) {
+      m.roadMode = targetMode;
+      playMeterSound('road');
+    }
+    saveAppState();
+    refreshUI();
+    toast(targetMode === 'highway' ? '🚄 已切換為「高速公路」（計算 eTag）' : '🛣️ 已切換為「一般道路」');
+  }
+
+  function formatTaiwanAddressFromNominatim(data) {
+    if (!data) return '';
+    const a = data.address || {};
+    const city = a.city || a.county || '';
+    const dist = a.suburb || a.town || a.city_district || '';
+    const road = a.road || a.pedestrian || a.neighbourhood || '';
+    const rawHouse = String(a.house_number || '').trim();
+    const house = rawHouse ? `${rawHouse.replace(/號+$/g, '')}號` : '';
+    const composed = [city, dist, road, house].filter(Boolean).join('');
+    if (composed) return composed;
+    if (data.display_name) {
+      return data.display_name.split(',').slice(0, 3).map(s => s.trim()).reverse().join('');
+    }
+    return '';
+  }
+
+  async function reverseGeocodeLabel(lat, lon) {
+    let baseRoadLabel = '';
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=19&addressdetails=1&accept-language=zh-TW`);
+      if (res.ok) {
+        const data = await res.json();
+        const label = formatTaiwanAddressFromNominatim(data);
+        if (label) {
+          if (/\d+號/.test(label)) return label;
+          baseRoadLabel = label;
+        }
+      }
+    } catch (e) {}
+
+    try {
+      const pRes = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=3`);
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        const feat = (pData.features || []).find(f => f.properties && f.properties.housenumber);
+        if (feat && feat.properties) {
+          const p = feat.properties;
+          const houseStr = `${String(p.housenumber).replace(/號+$/g, '')}號`;
+          if (baseRoadLabel && !/\d+號/.test(baseRoadLabel)) {
+            return `${baseRoadLabel}${houseStr}`;
+          }
+          const composed = [p.county || p.city || p.state || '', p.district || p.locality || '', p.street || '', houseStr].filter(Boolean).join('');
+          if (composed) return composed;
+        }
+      }
+    } catch (e) {}
+
+    if (baseRoadLabel) {
+      try {
+        const q = `[out:json][timeout:4];(node(around:45,${lat},${lon})["addr:housenumber"];way(around:45,${lat},${lon})["addr:housenumber"];);out center 3;`;
+        const oRes = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
+        if (oRes.ok) {
+          const oData = await oRes.json();
+          let bestEl = null;
+          let bestDist = Infinity;
+          (oData.elements || []).forEach(el => {
+            const eLat = el.lat ?? el.center?.lat;
+            const eLon = el.lon ?? el.center?.lon;
+            if (typeof eLat === 'number' && typeof eLon === 'number') {
+              const d = haversineMeters(lat, lon, eLat, eLon);
+              if (d < bestDist) {
+                bestDist = d;
+                bestEl = el;
+              }
+            }
+          });
+          if (bestEl && bestEl.tags && bestEl.tags['addr:housenumber']) {
+            const hNum = `${String(bestEl.tags['addr:housenumber']).replace(/號+$/g, '')}號`;
+            return bestDist <= 18 ? `${baseRoadLabel}${hNum}` : `${baseRoadLabel}${hNum}附近`;
+          }
+        }
+      } catch (e) {}
+    }
+
+    return baseRoadLabel;
+  }
+
+  async function checkGeoRoad(lat, lon) {
+    const now = Date.now();
+    if (now - lastRoadQueryTs < 5000) return;
+    lastRoadQueryTs = now;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=zh-TW`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const label = formatTaiwanAddressFromNominatim(data);
+      if (label) {
+        if (/\d+號/.test(label) || !detectedRoadName || !detectedRoadName.startsWith(label)) {
+          detectedRoadName = label;
+        }
+      }
+
+      const a = data.address || {};
+      const roadStr = `${a.road || ''} ${a.ref || ''} ${data.name || ''}`;
+      const isHwyKeyword = /(國道[一二三四五六八十1234568]|國[135](?!\d)|中山高速公路|福爾摩沙高速公路|蔣渭水高速公路|五楊高架|汐五高架|Freeway)/i.test(roadStr);
+      const isLocalElevated = /(市民大道|建國高架|新生高架|環河快速|水源快速|台61|台62|台64|台65|台66|台68|台72|台74|台76|台78|台82|台84|台86|台88)/i.test(roadStr);
+
+      if (isHwyKeyword && !isLocalElevated && currentSpeedKmh >= 50) {
+        freewayConfirmStreak++;
+        nonFreewayStreak = 0;
+        if (freewayConfirmStreak >= 2) {
+          isOnTollFreeway135 = true;
+        }
+      } else {
+        freewayConfirmStreak = 0;
+        nonFreewayStreak++;
+        if (nonFreewayStreak >= 2 || currentSpeedKmh < 40) {
+          isOnTollFreeway135 = false;
+        }
+      }
+    } catch (e) {}
   }
 
   function togglePauseTrip() {
@@ -1617,9 +2132,13 @@
     appState.meter.jumpCount = 0;
     appState.meter.tripStartTime = '';
     appState.meter.targetTripMeters = 0;
+    targetEndCoords = null;
+    boundEndGpsCoords = null;
     document.getElementById('inputEndAddr').value = '';
+    syncRouteDraftToStorage({ endAddr: '', endCoords: null, lastSearchWhich: '', lastSearchQuery: '' });
     const estBox = document.getElementById('estimateResultBox');
     if (estBox) estBox.classList.add('hidden');
+    setRoutePanelCollapsed(false);
     saveAppState();
     refreshUI();
     closeModal('checkoutModal');
@@ -1721,7 +2240,6 @@
       return;
     }
     if (isIOSDevice) {
-      // iOS 待機時僅做單次定位（只詢問一次，絕不連續彈窗轟炸），按下「開始載客跳錶」時才啟動連續追蹤
       navigator.geolocation.getCurrentPosition(
         handleGpsSuccess,
         handleGpsError,
@@ -2174,6 +2692,7 @@
         const data = JSON.parse(ev.target.result);
         if (data.settings) appState.settings = { ...DEFAULT_SETTINGS, ...data.settings };
         if (Array.isArray(data.landmarks)) appState.landmarks = data.landmarks;
+        if (Array.isArray(data.companyCache)) appState.companyCache = data.companyCache;
         if (Array.isArray(data.records)) appState.records = data.records;
         saveAppState();
         renderLandmarkChips();
@@ -2186,9 +2705,39 @@
     reader.readAsText(f);
   }
 
-  function onStartAddrManualInput() {
-    boundStartGpsCoords = null;
-    refreshUI();
+  function setRoutePanelCollapsed(collapsed) {
+    routePanelCollapsed = Boolean(collapsed);
+    const inputsBox = document.getElementById('routeCollapsibleInputs');
+    const summaryBox = document.getElementById('routeCollapsedSummary');
+    const toggleBtn = document.getElementById('btnToggleRoutePanel');
+    const swapBtn = document.getElementById('btnSwapRouteHeader');
+    const headerRow = document.getElementById('routeHeaderActionRow');
+    const estAddrWrap = document.getElementById('estResultAddrBlock');
+    if (inputsBox) inputsBox.classList.toggle('hidden', routePanelCollapsed);
+    if (summaryBox) summaryBox.classList.toggle('hidden', !routePanelCollapsed);
+    if (headerRow) headerRow.classList.toggle('hidden', routePanelCollapsed);
+    if (swapBtn) swapBtn.classList.toggle('hidden', routePanelCollapsed);
+    if (estAddrWrap) estAddrWrap.classList.toggle('hidden', routePanelCollapsed);
+    if (toggleBtn) toggleBtn.textContent = routePanelCollapsed ? '展開 ▾' : '收合 ▴';
+  }
+
+  function toggleRoutePanelCollapse() {
+    setRoutePanelCollapsed(!routePanelCollapsed);
+  }
+
+  function applyAddressTipCollapseUI() {
+    const collapsed = Boolean(appState.settings && appState.settings.tipCollapsed);
+    const bodyEl = document.getElementById('addressTipBody');
+    const badgeEl = document.getElementById('addressTipToggleBadge');
+    if (bodyEl) bodyEl.classList.toggle('hidden', collapsed);
+    if (badgeEl) badgeEl.textContent = collapsed ? '展開 ▾' : '收合 ▴';
+  }
+
+  function toggleAddressTipCollapse() {
+    if (!appState.settings) appState.settings = { ...DEFAULT_SETTINGS };
+    appState.settings.tipCollapsed = !Boolean(appState.settings.tipCollapsed);
+    saveAppState();
+    applyAddressTipCollapseUI();
   }
 
   function swapStartEndAddr() {
@@ -2197,7 +2746,11 @@
     const tmp = sInp.value;
     sInp.value = eInp.value;
     eInp.value = tmp;
-    boundStartGpsCoords = null;
+    const tmpCoord = boundStartGpsCoords;
+    boundStartGpsCoords = boundEndGpsCoords;
+    boundEndGpsCoords = tmpCoord;
+    hideAllPoiSuggestBoxes();
+    syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
     refreshUI();
     toast('已互換起點與終點');
   }
@@ -2212,7 +2765,10 @@
     const resBox = document.getElementById('estimateResultBox');
     if (resBox) resBox.classList.add('hidden');
     appState.meter.targetTripMeters = 0;
-    saveAppState();
+    targetEndCoords = null;
+    boundEndGpsCoords = null;
+    hideAllPoiSuggestBoxes();
+    syncRouteDraftToStorage({ endAddr: '', endCoords: null, lastSearchWhich: '', lastSearchQuery: '' });
     refreshUI();
     const fb = document.getElementById('navLaunchFallbackBox');
     if (fb) fb.classList.add('hidden');
@@ -2221,25 +2777,29 @@
 
   async function fillCurrentLocation() {
     const startInp = document.getElementById('inputStartAddr');
+    hideAllPoiSuggestBoxes();
     if (lastSmoothPoint) {
-      if (detectedRoadName) {
-        boundStartGpsCoords = null;
+      if (detectedRoadName && /\d+號/.test(detectedRoadName)) {
+        boundStartGpsCoords = { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon };
         startInp.value = detectedRoadName;
+        syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
         refreshUI();
-        toast('已帶入目前定位地址');
+        toast('已帶入目前完整門牌地址');
         return;
       }
-      toast('正在反查目前道路地址...');
+      toast('正在反查目前精準門牌地址...');
       const label = await reverseGeocodeLabel(lastSmoothPoint.lat, lastSmoothPoint.lon);
       if (label) {
-        boundStartGpsCoords = null;
+        boundStartGpsCoords = { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon };
         detectedRoadName = label;
         startInp.value = label;
+        syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
         refreshUI();
-        toast('已帶入目前定位地址');
+        toast(/\d+號/.test(label) ? '已帶入目前完整門牌地址' : '已帶入目前定位路段（該點圖資暫無門牌號）');
       } else {
         boundStartGpsCoords = { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon };
         startInp.value = `${lastSmoothPoint.lat.toFixed(5)}, ${lastSmoothPoint.lon.toFixed(5)}`;
+        syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
         refreshUI();
         toast('網路無法反查路名，已帶入 GPS 座標');
       }
@@ -2251,14 +2811,16 @@
         lastSmoothPoint = { lat, lon, ts: Date.now() };
         const label = await reverseGeocodeLabel(lat, lon);
         if (label) {
-          boundStartGpsCoords = null;
+          boundStartGpsCoords = { lat, lon };
           detectedRoadName = label;
           startInp.value = label;
+          syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
           refreshUI();
-          toast('已帶入目前定位地址');
+          toast(/\d+號/.test(label) ? '已帶入目前完整門牌地址' : '已帶入目前定位路段');
         } else {
           boundStartGpsCoords = { lat, lon };
           startInp.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+          syncRouteDraftToStorage({ lastSearchWhich: '', lastSearchQuery: '' });
           refreshUI();
           toast('已帶入目前 GPS 座標');
         }
@@ -2271,6 +2833,11 @@
   async function geocodeAddress(query) {
     const raw = String(query || '').trim();
     if (!raw) return null;
+
+    const cached = (appState.companyCache || []).find(x => x.alias === raw || x.addr === raw);
+    if (cached && typeof cached.lat === 'number' && typeof cached.lon === 'number') {
+      return { lat: cached.lat, lon: cached.lon, label: cached.addr || raw };
+    }
 
     const atMatch = raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     const qCoordMatch = raw.match(/[?&](?:q|query|ll|destination)=(-?\d+\.\d+),(-?\d+\.\d+)/);
@@ -2464,6 +3031,7 @@
       if (ov) ov.classList.add('show');
       return;
     }
+    hideAllPoiSuggestBoxes();
     const startVal = document.getElementById('inputStartAddr').value.trim();
     const endVal = document.getElementById('inputEndAddr').value.trim();
     const box = document.getElementById('estimateResultBox');
@@ -2489,12 +3057,17 @@
       } else {
         startCoords = { lat: 24.9333, lon: 121.3694, label: detectedRoadName || '目前位置' };
       }
-      const endCoords = await geocodeAddress(endVal);
+      const endCoords = (boundEndGpsCoords && endVal)
+        ? { lat: boundEndGpsCoords.lat, lon: boundEndGpsCoords.lon, label: endVal }
+        : await geocodeAddress(endVal);
 
       if (!endCoords) {
         toast('找不到終點位置，可貼上座標或直接按「導航並跳錶」');
         return;
       }
+
+      targetEndCoords = { lat: endCoords.lat, lon: endCoords.lon, label: endCoords.label || endVal };
+      lastDynamicRerouteTs = Date.now();
 
       let km = 0;
       let estMin = 0;
@@ -2504,7 +3077,6 @@
         const rRes = await fetch(osrmUrl);
         const rData = await rRes.json();
         if (rData && rData.routes && rData.routes.length > 0) {
-          // 偵測每條候選路線是否走國道/快速道路，貼近 Google 導航「只要上國道更順暢就優先導國道」的邏輯
           const straightKm = haversineMeters(startCoords.lat, startCoords.lon, endCoords.lat, endCoords.lon) / 1000;
           const analyzedRoutes = rData.routes.map(rt => {
             const stepNames = (rt.legs || []).flatMap(lg => (lg.steps || []).map(st => `${st.name || ''} ${st.ref || ''}`)).join(' ');
@@ -2512,10 +3084,8 @@
             const avgKmh = (rt.distance / Math.max(1, rt.duration)) * 3.6;
             return { route: rt, hasFreeway: hasFreeway || avgKmh >= 48, avgKmh };
           });
-          const fastestDur = Math.min(...analyzedRoutes.map(x => x.route.duration));
           const picked = analyzedRoutes.reduce((best, cur) => {
             if (straightKm >= 5.5) {
-              // 只要走國道/快速道路比純平面快，或時間只差 2.5 分鐘內（Google 導航會優先選國道避開市區紅綠燈）
               if (cur.hasFreeway && !best.hasFreeway && cur.route.duration <= best.route.duration + 150) return cur;
               if (!cur.hasFreeway && best.hasFreeway && best.route.duration <= cur.route.duration + 150) return best;
             }
@@ -2535,7 +3105,7 @@
 
       const s = appState.settings;
       const meters = km * 1000;
-      appState.meter.targetTripMeters = meters;
+      appState.meter.targetTripMeters = (appState.meter.running ? (appState.meter.distMeters || 0) : 0) + meters;
       saveAppState();
       refreshUI();
       let estMinFare = 0;
@@ -2568,7 +3138,7 @@
 
       box.classList.remove('hidden');
       box.innerHTML = `
-        <div class="space-y-1 pb-2 border-b border-slate-700/60">
+        <div id="estResultAddrBlock" class="${routePanelCollapsed ? 'hidden ' : ''}space-y-1 pb-2 border-b border-slate-700/60">
           <div class="flex items-start gap-1.5">
             <span class="text-emerald-500 font-black whitespace-nowrap shrink-0">🟢 上車起點：</span>
             <span class="text-slate-100 font-bold break-all">${esc(startCoords.label || startVal || '目前位置')}</span>
@@ -2596,6 +3166,7 @@
   }
 
   async function openExternalNavigation(alsoStartMeter) {
+    hideAllPoiSuggestBoxes();
     const startVal = document.getElementById('inputStartAddr').value.trim();
     const endVal = document.getElementById('inputEndAddr').value.trim();
     if (!endVal) {
@@ -2605,6 +3176,9 @@
     }
     if (alsoStartMeter && !appState.meter.running) {
       startTrip();
+    }
+    if (alsoStartMeter) {
+      setRoutePanelCollapsed(true);
     }
     const statusPillRow = document.getElementById('topStatusPillRow');
     if (statusPillRow) {
@@ -2621,8 +3195,12 @@
           : (startVal
             ? await geocodeAddress(startVal)
             : (lastSmoothPoint ? { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon } : { lat: 24.9333, lon: 121.3694 }));
-        const ec = await geocodeAddress(endVal);
+        const ec = (boundEndGpsCoords && endVal)
+          ? { lat: boundEndGpsCoords.lat, lon: boundEndGpsCoords.lon, label: endVal }
+          : await geocodeAddress(endVal);
         if (sc && ec) {
+          targetEndCoords = { lat: ec.lat, lon: ec.lon, label: ec.label || endVal };
+          lastDynamicRerouteTs = Date.now();
           let routeMeters = 0;
           try {
             const rRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${sc.lon},${sc.lat};${ec.lon},${ec.lat}?overview=false&alternatives=3&steps=true&continue_straight=false`);
@@ -2649,7 +3227,7 @@
             routeMeters = haversineMeters(sc.lat, sc.lon, ec.lat, ec.lon) * 1.2;
           }
           if (routeMeters > 0) {
-            appState.meter.targetTripMeters = Math.round(routeMeters);
+            appState.meter.targetTripMeters = (appState.meter.running ? (appState.meter.distMeters || 0) : 0) + routeMeters;
             saveAppState();
             refreshUI();
           }
@@ -2657,8 +3235,14 @@
       } catch (e) {}
     })();
 
-    const encodedDest = encodeURIComponent(endVal);
-    let queryParts = [`daddr=${encodedDest}`, 'dirflg=d'];
+    const activeEndCoord = (boundEndGpsCoords && endVal)
+      ? boundEndGpsCoords
+      : (targetEndCoords && endVal ? { lat: targetEndCoords.lat, lon: targetEndCoords.lon } : null);
+    const destNavParam = activeEndCoord
+      ? `${activeEndCoord.lat.toFixed(6)},${activeEndCoord.lon.toFixed(6)}`
+      : encodeURIComponent(endVal);
+
+    let queryParts = [`daddr=${destNavParam}`, 'dirflg=d'];
     if (boundStartGpsCoords && startVal) {
       queryParts.unshift(`saddr=${boundStartGpsCoords.lat.toFixed(6)},${boundStartGpsCoords.lon.toFixed(6)}`);
     } else if (startVal) {
@@ -2668,7 +3252,9 @@
     }
     const qStr = queryParts.join('&');
     const url = `https://maps.google.com/maps?${qStr}`;
-    const androidIntentUrl = `intent://?q=${encodedDest}&mode=d#Intent;scheme=google.navigation;package=com.google.android.apps.maps;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+    const androidIntentUrl = activeEndCoord
+      ? `intent://?q=${activeEndCoord.lat.toFixed(6)},${activeEndCoord.lon.toFixed(6)}(${encodeURIComponent(endVal)})&mode=d#Intent;scheme=google.navigation;package=com.google.android.apps.maps;S.browser_fallback_url=${encodeURIComponent(url)};end`
+      : `intent://?q=${encodeURIComponent(endVal)}&mode=d#Intent;scheme=google.navigation;package=com.google.android.apps.maps;S.browser_fallback_url=${encodeURIComponent(url)};end`;
     const isAndroid = /Android/i.test(navigator.userAgent);
 
     lastPreparedNavUrl = url;
@@ -2734,9 +3320,116 @@
     return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  async function runDynamicRouteRecalc() {
+    const m = appState.meter;
+    if (!m.running || m.paused || !targetEndCoords || !lastSmoothPoint) return;
+    if (dynamicRerouteInFlight) return;
+    const now = Date.now();
+    if (now - lastDynamicRerouteTs < 45000) return;
+    if (currentSpeedKmh < 5) return;
+
+    const straightRemain = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, targetEndCoords.lat, targetEndCoords.lon);
+    if (straightRemain < 250) return;
+
+    dynamicRerouteInFlight = true;
+    lastDynamicRerouteTs = now;
+    try {
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lastSmoothPoint.lon},${lastSmoothPoint.lat};${targetEndCoords.lon},${targetEndCoords.lat}?overview=false&alternatives=3&steps=true&continue_straight=false`;
+      const rRes = await fetch(osrmUrl);
+      if (!rRes.ok) return;
+      const rData = await rRes.json();
+      if (!rData || !rData.routes || rData.routes.length === 0) return;
+
+      const straightKm = straightRemain / 1000;
+      const analyzedRoutes = rData.routes.map(rt => {
+        const stepNames = (rt.legs || []).flatMap(lg => (lg.steps || []).map(st => `${st.name || ''} ${st.ref || ''}`)).join(' ');
+        const hasFreeway = /(國道|福爾摩沙|中山高|蔣渭水|五楊|汐五|台61|台62|台64|台65|台66|台68|台72|台74|台76|台78|台82|台84|台86|台88|Freeway|Expressway|國1|國3|國5|國2|國4|國6|國8|國10)/i.test(stepNames);
+        const avgKmh = (rt.distance / Math.max(1, rt.duration)) * 3.6;
+        return { route: rt, hasFreeway: hasFreeway || avgKmh >= 48 };
+      });
+      const picked = analyzedRoutes.reduce((best, cur) => {
+        if (straightKm >= 5.5) {
+          if (cur.hasFreeway && !best.hasFreeway && cur.route.duration <= best.route.duration + 150) return cur;
+          if (!cur.hasFreeway && best.hasFreeway && best.route.duration <= cur.route.duration + 150) return best;
+        }
+        return cur.route.duration < best.route.duration ? cur : best;
+      }, analyzedRoutes[0]);
+
+      const remMeters = Math.max(0, picked.route.distance);
+      const remKm = Number((remMeters / 1000).toFixed(1));
+      const remMin = Math.max(1, Math.round(picked.route.duration / 60));
+
+      m.targetTripMeters = Math.round((m.distMeters || 0) + remMeters);
+
+      const curFareObj = computeCurrentFare();
+      const s = appState.settings;
+      let remMinAdd = 0;
+      let remMaxAdd = 0;
+
+      if (s.billingMode === 'uber') {
+        const surge = Math.max(1, Number(s.uberSurge) || 1);
+        const uKm = Number(s.uberPerKm) || 25;
+        const uMinRate = Number(s.uberPerMin) || 3.4;
+        remMinAdd = Math.round((remKm * uKm + remMin * uMinRate) * surge);
+        const etagBuf = (picked.hasFreeway || remKm >= 8) ? Math.round(remKm * 0.65 * ETAG_RATE_PER_KM) : 0;
+        remMaxAdd = Math.round((remKm * uKm + (remMin * 1.25) * uMinRate) * surge + etagBuf);
+      } else {
+        const coveredMeters = m.distMeters || 0;
+        const uncoveredBase = Math.max(0, s.baseDist - coveredMeters);
+        const billableRemMeters = Math.max(0, remMeters - uncoveredBase);
+        if (billableRemMeters > 0) {
+          remMinAdd = (Math.floor(billableRemMeters / s.stepDist) + 1) * s.stepFare;
+        }
+        const waitBuf = Math.ceil((remMinAdd * 0.18) / s.stepFare) * s.stepFare;
+        const etagBuf = (picked.hasFreeway || remKm >= 8) ? Math.round(remKm * 0.65 * ETAG_RATE_PER_KM) : 0;
+        remMaxAdd = Math.max(remMinAdd, Math.round((remMinAdd + waitBuf + etagBuf) / 5) * 5);
+      }
+
+      const dynMinTotal = curFareObj.totalFare + remMinAdd;
+      const dynMaxTotal = Math.max(dynMinTotal, curFareObj.totalFare + remMaxAdd);
+
+      const box = document.getElementById('estimateResultBox');
+      if (box) {
+        const startLabel = m.tripStartAddr || document.getElementById('inputStartAddr')?.value.trim() || '上車起點';
+        const endLabel = targetEndCoords.label || document.getElementById('inputEndAddr')?.value.trim() || '下車終點';
+        box.classList.remove('hidden');
+        box.innerHTML = `
+          <div id="estResultAddrBlock" class="${routePanelCollapsed ? 'hidden ' : ''}space-y-1 pb-2 border-b border-slate-700/60">
+            <div class="flex items-start gap-1.5">
+              <span class="text-emerald-500 font-black whitespace-nowrap shrink-0">🟢 上車起點：</span>
+              <span class="text-slate-100 font-bold break-all">${esc(startLabel)}</span>
+            </div>
+            <div class="flex items-start gap-1.5">
+              <span class="text-rose-500 font-black whitespace-nowrap shrink-0">🔴 下車終點：</span>
+              <span class="text-slate-100 font-bold break-all">${esc(endLabel)}</span>
+            </div>
+          </div>
+          <div class="space-y-1.5 pt-1">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-black text-emerald-400">🔄 動態路線已即時重算</span>
+              <span class="text-[10px] text-slate-400">每 45 秒自動校正</span>
+            </div>
+            <div class="text-slate-300">剩餘里程 <strong class="text-sky-400">${remKm.toFixed(1)} km</strong>（約 ${remMin} 分）・已開 ${(m.distMeters / 1000).toFixed(1)} km</div>
+            <div class="rounded-xl bg-[#151e32] border border-amber-400/40 px-3 py-2 flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-slate-300">動態預估總車資</span>
+              <span class="text-sm sm:text-base font-black text-amber-400 text-right">NT$ ${dynMinTotal} 至 NT$ ${dynMaxTotal}</span>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-400 leading-relaxed">※ 已結合目前實際跳錶金額與最新定位剩餘路程動態估算。</div>
+        `;
+      }
+
+      saveAppState();
+      refreshUI();
+    } catch (e) {
+    } finally {
+      dynamicRerouteInFlight = false;
+    }
+  }
+
   setInterval(() => {
     const m = appState.meter;
-    if (m.autoRoad) {
+    if (m.autoRoad && Date.now() >= (m.manualLockUntil || 0)) {
       if (m.roadMode === 'local') {
         if (isOnTollFreeway135) {
           m.roadMode = 'highway';
@@ -2756,6 +3449,7 @@
       if (currentSpeedKmh < 5) {
         m.waitSeconds += 1;
       }
+      runDynamicRouteRecalc();
     }
 
     saveAppState();
@@ -2782,6 +3476,14 @@
     };
     document.getElementById('customInputModal').classList.remove('hidden');
     setTimeout(() => inp.focus(), 50);
+  }
+  function openCustomTollModal(ctx) {
+    openCustomInput('輸入國道通行費金額（元）', checkoutExtraToll || 0, 'number', val => {
+      if (ctx === 'checkout') {
+        checkoutExtraToll = val;
+        addCheckoutToll(0);
+      }
+    });
   }
   function openConfirm(text, cb) {
     document.getElementById('customConfirmText').textContent = text;
@@ -2840,9 +3542,22 @@
   }
 
   loadAppState();
+  restoreRouteDraftFromStorage();
   renderLandmarkChips();
+  applyAddressTipCollapseUI();
   refreshUI();
   initGPS();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      syncRouteDraftToStorage();
+    } else if (document.visibilityState === 'visible') {
+      if (!document.getElementById('inputStartAddr')?.value && !document.getElementById('inputEndAddr')?.value) {
+        restoreRouteDraftFromStorage();
+        refreshUI();
+      }
+    }
+  });
+  window.addEventListener('pagehide', () => syncRouteDraftToStorage());
   setTimeout(promptResumeInterruptedTrip, 600);
   setTimeout(() => checkAppUpdate(false), 2500);
 </script>
