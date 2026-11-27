@@ -706,7 +706,7 @@
 
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.9</span></div>
+            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.11</span></div>
             <div id="updateCheckSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動檢查雲端最新版本</div>
           </div>
           <button type="button" onclick="checkAppUpdate(true)" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
@@ -721,7 +721,7 @@
   <div id="updateAvailableModal" class="hidden fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-4 shadow-2xl border border-amber-400/60 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.9</span></h3>
+        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.11</span></h3>
         <button type="button" onclick="closeModal('updateAvailableModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
       </div>
       <div class="bg-[#0d1424] rounded-2xl p-3 border border-slate-700/70 space-y-1.5 text-xs">
@@ -733,7 +733,7 @@
       </p>
       <div class="grid grid-cols-2 gap-2 pt-1">
         <button type="button" onclick="closeModal('updateAvailableModal')" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">稍後再說</button>
-        <a id="newVersionDownloadBtn" href="https://reurl.cc/aEQ6Zl" target="_blank" rel="noopener noreferrer" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black text-center flex items-center justify-center gap-1 shadow-lg">
+        <a id="newVersionDownloadBtn" href="https://reurl.cc/aEQ6Zl" onclick="return handleNativeUpdateClick(event)" target="_blank" rel="noopener noreferrer" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black text-center flex items-center justify-center gap-1 shadow-lg">
           <span>🚀</span><span>立即前往更新</span>
         </a>
       </div>
@@ -796,7 +796,7 @@
 
 <script>
   const APP_KEY = 'taximeter_dark_cockpit_v1';
-  const APP_VERSION = '1.0.9';
+  const APP_VERSION = '1.0.11';
   const UPDATE_MANIFEST_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/version.json';
   const DEFAULT_UPDATE_URL = 'https://reurl.cc/aEQ6Zl';
   const ETAG_RATE_PER_KM = 1.2;
@@ -1052,14 +1052,12 @@
             const rawAlias = String(item.alias || '').trim();
             const rawAddr = String(item.addr || '').trim();
             const m = rawAddr.match(/^(.+?)[（(]([^()（）]+)[)）]$/);
-            if (m) {
-              return {
-                ...item,
-                alias: rawAlias.replace(/[（(][^()（）]+[)）]$/, '').trim() || m[1].trim(),
-                addr: m[2].trim()
-              };
-            }
-            return item;
+            const extractedAddr = m ? m[2].trim() : rawAddr;
+            return {
+              ...item,
+              alias: (m ? rawAlias.replace(/[（(][^()（）]+[)）]$/, '').trim() || m[1].trim() : rawAlias),
+              addr: sanitizeTaiwanAddress(extractedAddr)
+            };
           });
         }
         if (data.routeDraft && typeof data.routeDraft === 'object') {
@@ -1273,10 +1271,74 @@
     if (eBox) eBox.classList.add('hidden');
   }
 
+  const TW_EN_TO_ZH_MAP = [
+    ['New Taipei City', '新北市'], ['New Taipei', '新北市'],
+    ['Taipei City', '台北市'], ['Taipei', '台北市'],
+    ['Taoyuan City', '桃園市'], ['Taoyuan', '桃園市'],
+    ['Taichung City', '台中市'], ['Taichung', '台中市'],
+    ['Tainan City', '台南市'], ['Tainan', '台南市'],
+    ['Kaohsiung City', '高雄市'], ['Kaohsiung', '高雄市'],
+    ['Keelung City', '基隆市'], ['Keelung', '基隆市'],
+    ['Hsinchu City', '新竹市'], ['Hsinchu County', '新竹縣'], ['Hsinchu', '新竹'],
+    ['Miaoli County', '苗栗縣'], ['Miaoli', '苗栗縣'],
+    ['Changhua County', '彰化縣'], ['Changhua', '彰化縣'],
+    ['Nantou County', '南投縣'], ['Nantou', '南投縣'],
+    ['Yunlin County', '雲林縣'], ['Yunlin', '雲林縣'],
+    ['Chiayi City', '嘉義市'], ['Chiayi County', '嘉義縣'], ['Chiayi', '嘉義'],
+    ['Pingtung County', '屏東縣'], ['Pingtung', '屏東縣'],
+    ['Yilan County', '宜蘭縣'], ['Yilan', '宜蘭縣'],
+    ['Hualien County', '花蓮縣'], ['Hualien', '花蓮縣'],
+    ['Taitung County', '台東縣'], ['Taitung', '台東縣'],
+    ['Penghu County', '澎湖縣'], ['Kinmen County', '金門縣'], ['Lienchiang County', '連江縣'],
+    ['Sanxia District', '三峽區'], ['Sanxia', '三峽區'],
+    ['Banqiao District', '板橋區'], ['Banqiao', '板橋區'],
+    ['Tucheng District', '土城區'], ['Tucheng', '土城區'],
+    ['Shulin District', '樹林區'], ['Shulin', '樹林區'],
+    ['Yingge District', '鶯歌區'], ['Yingge', '鶯歌區'],
+    ['Zhonghe District', '中和區'], ['Zhonghe', '中和區'],
+    ['Yonghe District', '永和區'], ['Yonghe', '永和區'],
+    ['Xindian District', '新店區'], ['Xindian', '新店區'],
+    ['Xinzhuang District', '新莊區'], ['Xinzhuang', '新莊區'],
+    ['Sanchong District', '三重區'], ['Sanchong', '三重區'],
+    ['Luzhou District', '蘆洲區'], ['Luzhou', '蘆洲區'],
+    ['Tamsui District', '淡水區'], ['Tamsui', '淡水區'],
+    ['Xizhi District', '汐止區'], ['Xizhi', '汐止區'],
+    ['Linkou District', '林口區'], ['Linkou', '林口區'],
+    ['Wugu District', '五股區'], ['Wugu', '五股區'],
+    ['Taishan District', '泰山區'], ['Taishan', '泰山區'],
+    ['Ruifang District', '瑞芳區'], ['Shenkeng District', '深坑區'],
+    ['Zhongshan District', '中山區'], ['Da’an District', '大安區'], ["Da'an District", '大安區'],
+    ['Xinyi District', '信義區'], ['Songshan District', '松山區'],
+    ['Datong District', '大同區'], ['Wanhua District', '萬華區'],
+    ['Zhongzheng District', '中正區'], ['Neihu District', '內湖區'],
+    ['Nangang District', '南港區'], ['Shilin District', '士林區'],
+    ['Beitou District', '北投區'], ['Wenshan District', '文山區'],
+    ['Taoyuan District', '桃園區'], ['Zhongli District', '中壢區'], ['Zhongli', '中壢區'],
+    ['Pingzhen District', '平鎮區'], ['Bade District', '八德區'], ['Bade', '八德區'],
+    ['Yangmei District', '楊梅區'], ['Luzhu District', '蘆竹區'],
+    ['Dayuan District', '大園區'], ['Guishan District', '龜山區'], ['Guishan', '龜山區'],
+    ['Longtan District', '龍潭區'], ['Daxi District', '大溪區'], ['Daxi', '大溪區'],
+    ['Dazheng Village', '大成里'], ['Dongmen Village', '東門里'],
+    ['Chunri Road', '春日路'], ['Jieshou Road', '介壽路'], ['Guoguang Street', '國光街'],
+    ['Yuandong Road', '遠東路'], ['Zhongshan Road', '中山路'], ['Zhong正 Road', '中正路'], ['Zhongzheng Road', '中正路']
+  ];
+
+  function translateTaiwanEnToZh(text) {
+    let out = String(text || '');
+    for (const [en, zh] of TW_EN_TO_ZH_MAP) {
+      const re = new RegExp(en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      out = out.replace(re, zh);
+    }
+    // 清理殘留的英文 District / Village / Township 尾綴
+    out = out.replace(/\b[A-Za-z]+\s*(?:District|Village|Township|City|County)\b/gi, '');
+    return out;
+  }
+
   function sanitizeTaiwanAddress(raw) {
     let s = String(raw || '').trim();
     const innerMatch = s.match(/[（(]([^()（）]+)[)）]$/);
     if (innerMatch) s = innerMatch[1].trim();
+    s = translateTaiwanEnToZh(s);
     s = s.replace(/^台灣|^臺灣/, '').trim();
     // 移除中文字與數字/符號之間的多餘空白（例如「中央路三段 38 號」→「中央路三段38號」）
     s = s.replace(/([\u4e00-\u9fa5\d\-－之])\s+(?=[\u4e00-\u9fa5\d\-－之號樓層F室巷弄段])/g, '$1');
@@ -1356,7 +1418,7 @@
           candidates.push({
             source: 'memory',
             title: item.alias,
-            addr: item.addr,
+            addr: sanitizeTaiwanAddress(item.addr),
             lat: item.lat,
             lon: item.lon,
             rawQuery: query
@@ -1375,7 +1437,7 @@
           candidates.push({
             source: 'landmark',
             title: name,
-            addr: addr,
+            addr: sanitizeTaiwanAddress(addr),
             lat: null,
             lon: null,
             rawQuery: query
@@ -1402,7 +1464,9 @@
 
     const fetchPhoton = async () => {
       try {
-        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${biasLat}&lon=${biasLon}&limit=10`);
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${biasLat}&lon=${biasLon}&limit=10`, {
+          headers: { 'Accept-Language': 'zh-TW,zh;q=0.9' }
+        });
         if (!res.ok) return [];
         const data = await res.json();
         return (data.features || []).filter(f => {
@@ -1412,16 +1476,22 @@
           const p = f.properties || {};
           const [lon, lat] = f.geometry?.coordinates || [null, null];
           const title = p.name || p.street || '';
-          const composedAddr = [p.county || p.city || p.state || '', p.district || p.locality || '', p.street || '', p.housenumber ? `${p.housenumber}號` : ''].filter(Boolean).join('');
+          const rawComposed = [p.county || p.city || p.state || '', p.district || p.locality || '', p.street || '', p.housenumber ? `${p.housenumber}號` : ''].filter(Boolean).join('');
+          const composedAddr = sanitizeTaiwanAddress(rawComposed);
           return {
             source: 'online',
-            title: title || composedAddr,
-            addr: composedAddr || title,
+            title: sanitizeTaiwanAddress(title) || composedAddr,
+            addr: composedAddr || sanitizeTaiwanAddress(title),
             lat: typeof lat === 'number' ? lat : null,
             lon: typeof lon === 'number' ? lon : null,
             rawQuery: query
           };
-        }).filter(item => isRelevantResult(item.title, item.addr));
+        }).filter(item => {
+          if (!isRelevantResult(item.title, item.addr)) return false;
+          // 在 Android WebView 下若 Photon 仍回傳英文路名/地名（含連續 4 個以上英文字母），直接過濾掉交由中文 Nominatim 呈現
+          if (/[A-Za-z]{4,}/.test(item.addr) && !/[A-Za-z]{2,}/.test(query)) return false;
+          return true;
+        });
       } catch (e) { return []; }
     };
 
@@ -1437,10 +1507,11 @@
           const dist = a.suburb || a.town || a.city_district || '';
           const road = a.road || '';
           const house = a.house_number ? `${String(a.house_number).replace(/號+$/g, '')}號` : '';
-          const composedAddr = [city, dist, road, house].filter(Boolean).join('') || item.display_name?.split(',').slice(0, 3).reverse().join('') || title;
+          const rawComposed = [city, dist, road, house].filter(Boolean).join('') || item.display_name?.split(',').slice(0, 3).reverse().join('') || title;
+          const composedAddr = sanitizeTaiwanAddress(rawComposed);
           return {
             source: 'online',
-            title: title || composedAddr,
+            title: sanitizeTaiwanAddress(title) || composedAddr,
             addr: composedAddr,
             lat: Number(item.lat),
             lon: Number(item.lon),
@@ -1450,9 +1521,9 @@
       } catch (e) { return []; }
     };
 
-    const queriesToRun = [fetchPhoton(), fetchNominatim(query)];
+    const queriesToRun = [fetchNominatim(query), fetchPhoton()];
     if (localCityPrefix && !query.includes(localCityPrefix)) {
-      queriesToRun.push(fetchNominatim(`${localCityPrefix} ${query}`));
+      queriesToRun.unshift(fetchNominatim(`${localCityPrefix} ${query}`));
     }
 
     const resultGroups = await Promise.all(queriesToRun);
@@ -1542,16 +1613,24 @@
     box.classList.remove('hidden');
   }
 
-  function selectPoiCandidate(which, idx) {
+  async function selectPoiCandidate(which, idx) {
     const list = poiCandidatesMap[which] || [];
     const item = list[idx];
     if (!item) return;
     hideAllPoiSuggestBoxes();
     const inp = document.getElementById(which === 'start' ? 'inputStartAddr' : 'inputEndAddr');
     const cleanTitle = String(item.title || '').replace(/[（(][^()（）]+[)）]$/, '').trim();
-    const pureAddr = sanitizeTaiwanAddress(item.addr) || cleanTitle;
-    if (inp) inp.value = pureAddr;
+    let pureAddr = sanitizeTaiwanAddress(item.addr) || cleanTitle;
     const hasCoords = (typeof item.lat === 'number' && typeof item.lon === 'number' && !isNaN(item.lat) && !isNaN(item.lon));
+
+    if (hasCoords && /[A-Za-z]{3,}/.test(pureAddr)) {
+      const zhRev = await reverseGeocodeLabel(item.lat, item.lon);
+      if (zhRev && !/[A-Za-z]{3,}/.test(zhRev)) {
+        pureAddr = sanitizeTaiwanAddress(zhRev);
+      }
+    }
+
+    if (inp) inp.value = pureAddr;
     if (which === 'start') {
       boundStartGpsCoords = hasCoords ? { lat: item.lat, lon: item.lon } : null;
     } else {
@@ -1958,9 +2037,9 @@
     const rawHouse = String(a.house_number || '').trim();
     const house = rawHouse ? `${rawHouse.replace(/號+$/g, '')}號` : '';
     const composed = [city, dist, road, house].filter(Boolean).join('');
-    if (composed) return composed;
+    if (composed) return sanitizeTaiwanAddress(composed);
     if (data.display_name) {
-      return data.display_name.split(',').slice(0, 3).map(s => s.trim()).reverse().join('');
+      return sanitizeTaiwanAddress(data.display_name.split(',').slice(0, 3).map(s => s.trim()).reverse().join(''));
     }
     return '';
   }
@@ -1991,7 +2070,7 @@
             return `${baseRoadLabel}${houseStr}`;
           }
           const composed = [p.county || p.city || p.state || '', p.district || p.locality || '', p.street || '', houseStr].filter(Boolean).join('');
-          if (composed) return composed;
+          if (composed) return sanitizeTaiwanAddress(composed);
         }
       }
     } catch (e) {}
@@ -3581,6 +3660,17 @@
       if (subEl) subEl.textContent = '檢查失敗（請確認網路連線）';
       if (isManual) toast('無法連線檢查更新，請稍後再試');
     }
+  }
+
+  function handleNativeUpdateClick(e) {
+    const url = document.getElementById('newVersionDownloadBtn')?.href || DEFAULT_UPDATE_URL;
+    if (window.AndroidUpdater && typeof window.AndroidUpdater.downloadAndInstall === 'function') {
+      if (e) e.preventDefault();
+      closeModal('updateAvailableModal');
+      window.AndroidUpdater.downloadAndInstall(url);
+      return false;
+    }
+    return true;
   }
 
   loadAppState();
