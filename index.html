@@ -82,6 +82,33 @@
     border-color: #f59e0b !important;
     color: #78350f !important;
   }
+  body.theme-light #addressTipToggleBadge {
+    background-color: #f59e0b !important;
+    border-color: #b45309 !important;
+    color: #ffffff !important;
+  }
+  body.theme-light .poi-edit-btn {
+    background-color: #fef3c7 !important;
+    border-color: #d97706 !important;
+    color: #92400e !important;
+  }
+  body.theme-light .poi-google-btn {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #fde047 !important;
+  }
+  body.theme-light .poi-tag-sky {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+  }
+  body.theme-light .poi-tag-amber {
+    background-color: #d97706 !important;
+    color: #ffffff !important;
+  }
+  body.theme-light .poi-tag-emerald {
+    background-color: #059669 !important;
+    color: #ffffff !important;
+  }
 
   @media print {
     body * { visibility: hidden; }
@@ -332,7 +359,7 @@
           <div class="address-tip-box rounded-xl bg-amber-500/15 border border-amber-400/50 px-3 py-2 text-xs font-bold text-amber-200 leading-relaxed space-y-1.5">
             <button type="button" onclick="toggleAddressTipCollapse()" class="w-full flex items-center justify-between gap-2 text-left">
               <span>💡 <strong>操作使用說明</strong></span>
-              <span id="addressTipToggleBadge" class="px-2 py-0.5 rounded-lg bg-amber-400/25 border border-amber-400/50 text-[11px] font-black text-amber-200 whitespace-nowrap shrink-0">收合 ▴</span>
+              <span id="addressTipToggleBadge" class="px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 border border-amber-300 text-[11px] font-black whitespace-nowrap shrink-0 shadow-xs">收合 ▴</span>
             </button>
             <div id="addressTipBody" class="space-y-1 pt-0.5 border-t border-amber-400/30">
               <div>1️⃣ <strong>輸入門牌更精準：</strong>直接輸入完整路名與門牌（例如：三峽區介壽路一段316號），試算與導航最準確。</div>
@@ -813,6 +840,7 @@
   let appState = {
     settings: { ...DEFAULT_SETTINGS },
     landmarks: [...DEFAULT_LANDMARKS],
+    landmarksInitialized: false,
     companyCache: [],
     records: [],
     routeDraft: {
@@ -1013,8 +1041,11 @@
       if (raw) {
         const data = JSON.parse(raw);
         appState.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
-        if (Array.isArray(data.landmarks) && data.landmarks.length > 0) {
-          appState.landmarks = data.landmarks;
+        if (Array.isArray(data.landmarks)) {
+          if (data.landmarks.length > 0 || data.landmarksInitialized) {
+            appState.landmarks = data.landmarks;
+            appState.landmarksInitialized = true;
+          }
         }
         if (Array.isArray(data.companyCache)) {
           appState.companyCache = data.companyCache.map(item => {
@@ -1126,7 +1157,12 @@
     `;
     const chipsHtml = appState.landmarks.map((lm, idx) => {
       const label = getLandmarkDisplayName(lm);
-      return `<button type="button" data-idx="${idx}" class="landmark-chip px-3 py-1.5 rounded-full bg-[#1e293b] hover:bg-slate-700 border border-slate-600/80 text-xs font-bold text-slate-200 whitespace-nowrap active:scale-95">${esc(label)}</button>`;
+      return `
+        <span class="inline-flex items-center rounded-full bg-[#1e293b] border border-slate-600/80 overflow-hidden shadow-xs">
+          <button type="button" data-idx="${idx}" class="landmark-chip pl-3 pr-1.5 py-1.5 hover:bg-slate-700 text-xs font-bold text-slate-200 whitespace-nowrap active:scale-95">${esc(label)}</button>
+          <button type="button" onclick="deleteLandmarkAt(${idx})" title="刪除此常用點" class="pr-2.5 pl-1 py-1.5 hover:bg-rose-600/80 text-[11px] font-black text-slate-400 hover:text-white transition active:scale-95">✕</button>
+        </span>
+      `;
     }).join('');
     const addBtn = `<button type="button" onclick="openAddLandmarkModal()" class="px-3 py-1.5 rounded-full bg-emerald-200 hover:bg-emerald-300 text-emerald-950 text-xs font-black whitespace-nowrap shadow-sm active:scale-95">+ 新增常用點</button>`;
     container.innerHTML = toggleBtn + chipsHtml + addBtn;
@@ -1139,14 +1175,7 @@
         longPressed = false;
         pressTimer = setTimeout(() => {
           longPressed = true;
-          const lm = appState.landmarks[idx];
-          if (!lm) return;
-          openConfirm(`確定要刪除常用地點「${getLandmarkDisplayName(lm)}」嗎？`, () => {
-            appState.landmarks.splice(idx, 1);
-            saveAppState();
-            renderLandmarkChips();
-            toast('已刪除常用地點');
-          });
+          deleteLandmarkAt(idx);
         }, 650);
       };
       const cancelPress = () => {
@@ -1189,6 +1218,18 @@
     });
   }
 
+  function deleteLandmarkAt(idx) {
+    const lm = appState.landmarks[idx];
+    if (!lm) return;
+    openConfirm(`確定要刪除常用地點「${getLandmarkDisplayName(lm)}」嗎？`, () => {
+      appState.landmarks.splice(idx, 1);
+      appState.landmarksInitialized = true;
+      saveAppState();
+      renderLandmarkChips();
+      toast('已刪除常用地點');
+    });
+  }
+
   function toggleFillTarget() {
     fillTargetField = fillTargetField === 'end' ? 'start' : 'end';
     renderLandmarkChips();
@@ -1215,6 +1256,7 @@
     const finalName = name || addr;
     const finalAddr = addr || name;
     appState.landmarks.push({ name: finalName, addr: finalAddr });
+    appState.landmarksInitialized = true;
     if (addr && name && addr !== name) {
       rememberCompanyMapping(name, addr, null, null);
     }
@@ -1458,15 +1500,15 @@
       ? (isLoading ? '' : `<div class="px-2 py-1.5 text-[11px] text-slate-400">地圖庫暫無「${esc(query)}」建檔，可點下方按鈕用 Google 查完整門牌後貼上：</div>`)
       : list.map((c, idx) => {
           const tag = c.source === 'memory'
-            ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black shrink-0">已記憶</span>'
+            ? '<span class="poi-tag-amber px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black shrink-0">已記憶</span>'
             : (c.source === 'landmark'
-              ? '<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black shrink-0">常用點</span>'
-              : '<span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-black shrink-0">地標</span>');
+              ? '<span class="poi-tag-emerald px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black shrink-0">常用點</span>'
+              : '<span class="poi-tag-sky px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-black shrink-0">地標</span>');
           const distTag = (lastSmoothPoint && c.lat && c.lon)
             ? `<span class="text-[10px] text-slate-400 shrink-0">${(haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, c.lat, c.lon) / 1000).toFixed(1)} km</span>`
             : '';
           const coordBadge = (typeof c.lat === 'number' && typeof c.lon === 'number' && !isNaN(c.lat))
-            ? '<span class="text-[10px] text-emerald-400 font-bold shrink-0">🎯 精準座標</span>'
+            ? '<span class="text-[10px] text-emerald-500 font-bold shrink-0">🎯 精準座標</span>'
             : '';
           return `
             <div class="w-full p-2.5 rounded-xl bg-[#151e32] hover:bg-slate-800 border border-slate-700/70 transition flex items-center justify-between gap-2">
@@ -1478,7 +1520,7 @@
                 ${(coordBadge || distTag) ? `<div class="flex items-center gap-2 pl-0.5">${coordBadge}${distTag}</div>` : ''}
                 <div class="text-[11px] text-slate-300 leading-snug break-all pl-0.5">📍 ${esc(c.addr)}</div>
               </button>
-              <button type="button" onclick="editPoiCandidateAddress('${which}', ${idx})" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-black text-amber-300 whitespace-nowrap shrink-0 active:scale-95">
+              <button type="button" onclick="editPoiCandidateAddress('${which}', ${idx})" class="poi-edit-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-black text-amber-300 whitespace-nowrap shrink-0 active:scale-95">
                 ✏️ 補門牌
               </button>
             </div>
@@ -1487,7 +1529,7 @@
 
     const footerHtml = `
       <div class="mt-1 space-y-1.5">
-        <a href="${googleSearchUrl}" target="_blank" rel="noopener noreferrer" class="w-full py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/80 text-[11px] font-black text-amber-300 flex items-center justify-center gap-1.5">
+        <a href="${googleSearchUrl}" target="_blank" rel="noopener noreferrer" class="poi-google-btn w-full py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/80 text-[11px] font-black text-amber-300 flex items-center justify-center gap-1.5">
           <span>🌐</span><span>1. 用 Google 搜尋「${esc(query)}」查門牌地址</span>
         </a>
         <button type="button" onclick="pasteClipboardAndBindMerchant('${which}', '${esc(query).replace(/'/g, "\\'")}')" class="w-full py-2 px-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 border border-emerald-400/60 text-[11px] font-black text-white flex items-center justify-center gap-1.5 shadow active:scale-[0.99]">
