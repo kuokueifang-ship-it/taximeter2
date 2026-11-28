@@ -719,7 +719,7 @@
 
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.14</span></div>
+            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.15</span></div>
             <div id="updateCheckSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動檢查雲端最新版本</div>
           </div>
           <button type="button" onclick="checkAppUpdate(true)" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
@@ -734,7 +734,7 @@
   <div id="updateAvailableModal" class="hidden fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-4 shadow-2xl border border-amber-400/60 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.14</span></h3>
+        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.15</span></h3>
         <button type="button" onclick="closeModal('updateAvailableModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
       </div>
       <div class="bg-[#0d1424] rounded-2xl p-3 border border-slate-700/70 space-y-1.5 text-xs">
@@ -809,7 +809,7 @@
 
 <script>
   const APP_KEY = 'taximeter_dark_cockpit_v1';
-  const APP_VERSION = '1.0.14';
+  const APP_VERSION = '1.0.15';
   const UPDATE_MANIFEST_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/version.json';
   const SHARED_POIS_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/shared_pois.json';
   const DEFAULT_UPDATE_URL = 'https://reurl.cc/aEQ6Zl';
@@ -1375,7 +1375,7 @@
       appState.companyCache[idx] = entry;
     } else {
       appState.companyCache.unshift(entry);
-      if (appState.companyCache.length > 300) appState.companyCache.length = 300;
+      if (appState.companyCache.length > 2000) appState.companyCache.length = 2000;
     }
     saveAppState();
   }
@@ -1403,6 +1403,7 @@
 
   function onEndAddrManualInput() {
     boundEndGpsCoords = null;
+    targetEndCoords = null;
     const val = document.getElementById('inputEndAddr')?.value.trim() || '';
     syncRouteDraftToStorage({ lastSearchWhich: val.length >= 2 ? 'end' : '', lastSearchQuery: val.length >= 2 ? val : '' });
     refreshUI();
@@ -1590,6 +1591,38 @@
         if (a.source === 'online' && b.source !== 'online') return 1;
         return 0;
       });
+
+      // 若有「車隊共享 / 已記憶 / 常用點」尚未取得座標，背景靜默反查座標後自動重排（不卡住畫面）
+      const unlocatedLocals = candidates.filter(c =>
+        c.source !== 'online' &&
+        (typeof c.lat !== 'number' || typeof c.lon !== 'number' || isNaN(c.lat) || isNaN(c.lon)) &&
+        c.addr
+      ).slice(0, 3);
+
+      if (unlocatedLocals.length > 0) {
+        Promise.all(unlocatedLocals.map(async c => {
+          try {
+            const geo = await geocodeAddress(c.addr);
+            if (geo && typeof geo.lat === 'number' && typeof geo.lon === 'number' && !isNaN(geo.lat)) {
+              c.lat = geo.lat;
+              c.lon = geo.lon;
+              c._distMeters = haversineMeters(refPoint.lat, refPoint.lon, geo.lat, geo.lon);
+              const cachedItem = (appState.companyCache || []).find(x => x.alias === c.title || x.addr === c.addr);
+              if (cachedItem) {
+                cachedItem.lat = geo.lat;
+                cachedItem.lon = geo.lon;
+                saveAppState();
+              }
+            }
+          } catch (e) {}
+        })).then(() => {
+          const latestVal = (document.getElementById(which === 'start' ? 'inputStartAddr' : 'inputEndAddr')?.value.trim()) || '';
+          if (latestVal === query) {
+            candidates.sort((a, b) => (a._distMeters ?? Infinity) - (b._distMeters ?? Infinity));
+            renderPoiSuggestBox(which, query, candidates.slice(0, 8), false, refPoint);
+          }
+        });
+      }
     }
 
     renderPoiSuggestBox(which, query, candidates.slice(0, 8), false, refPoint);
@@ -2106,50 +2139,237 @@
     } catch (e) {}
 
     try {
-      const pRes = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=3`);
+      const pRes = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=3`, {
+        headers: { 'Accept-Language': 'zh-TW,zh;q=0.9' }
+      });
       if (pRes.ok) {
         const pData = await pRes.json();
-        const feat = (pData.features || []).find(f => f.properties && f.properties.housenumber);
+        const feat = (pData.features || []).find(f => f.properties && (f.properties.housenumber || f.properties.street));
         if (feat && feat.properties) {
           const p = feat.properties;
-          const houseStr = `${String(p.housenumber).replace(/號+$/g, '')}號`;
-          if (baseRoadLabel && !/\d+號/.test(baseRoadLabel)) {
-            return `${baseRoadLabel}${houseStr}`;
+          const city = p.county || p.city || p.state || '';
+          const dist = p.district || p.locality || '';
+          const road = p.street || '';
+          const house = p.housenumber ? `${String(p.housenumber).replace(/號+$/g, '')}號` : '';
+          const composed = sanitizeTaiwanAddress([city, dist, road, house].filter(Boolean).join(''));
+          if (composed && !/[A-Za-z]{3,}/.test(composed)) {
+            if (/\d+號/.test(composed)) return composed;
+            if (!baseRoadLabel) baseRoadLabel = composed;
           }
-          const composed = [p.county || p.city || p.state || '', p.district || p.locality || '', p.street || '', houseStr].filter(Boolean).join('');
-          if (composed) return sanitizeTaiwanAddress(composed);
         }
       }
     } catch (e) {}
 
-    if (baseRoadLabel) {
+    return baseRoadLabel;
+  }
+
+  async function geocodeAddress(query) {
+    const raw = String(query || '').trim();
+    if (!raw) return null;
+
+    const cached = (appState.companyCache || []).find(x => x.alias === raw || x.addr === raw);
+    if (cached && typeof cached.lat === 'number' && typeof cached.lon === 'number') {
+      return { lat: cached.lat, lon: cached.lon, label: cached.addr || raw };
+    }
+
+    const atMatch = raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const qCoordMatch = raw.match(/[?&](?:q|query|ll|destination)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const plainCoordMatch = raw.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+    const pickedCoord = atMatch || qCoordMatch || plainCoordMatch;
+    if (pickedCoord) {
+      return {
+        lat: Number(pickedCoord[1]),
+        lon: Number(pickedCoord[2]),
+        label: raw.startsWith('http') ? `${Number(pickedCoord[1]).toFixed(5)}, ${Number(pickedCoord[2]).toFixed(5)}` : raw
+      };
+    }
+
+    const knownPlaces = [
+      { keys: ['納智捷土城廠', '納智捷土城交車中心', '納智捷土城服務廠', 'LUXGEN土城', 'LUXGEN土城交車中心', 'LUXGEN土城廠', 'LUNGEN土城', 'LUNGEN土城交車中心', '納智捷土城'], lat: 24.9852, lon: 121.4519, label: '納智捷土城交車中心' },
+      { keys: ['三峽老街', '三峽祖師廟', '三峽區', '三峽'], lat: 24.9333, lon: 121.3694, label: '三峽老街' },
+      { keys: ['板橋車站', '板橋火車站', '板橋高鐵', '板橋轉運站', '板橋'], lat: 25.0143, lon: 121.4638, label: '板橋車站' },
+      { keys: ['桃園國際機場第一航廈', '桃園機場第一航廈', '桃機一航', '第一航廈'], lat: 25.0777, lon: 121.2328, label: '桃園國際機場第一航廈' },
+      { keys: ['桃園國際機場第二航廈', '桃園機場第二航廈', '桃機二航', '第二航廈', '桃園機場', '桃機'], lat: 25.0806, lon: 121.2407, label: '桃園國際機場第二航廈' },
+      { keys: ['高鐵雲林站', '雲林高鐵', '高鐵雲林', '虎尾高鐵'], lat: 23.7364, lon: 120.4158, label: '高鐵雲林站' },
+      { keys: ['高鐵台中站', '台中高鐵', '新烏日', '高鐵台中', '烏日高鐵'], lat: 24.1124, lon: 120.6152, label: '高鐵台中站' },
+      { keys: ['高鐵左營站', '左營高鐵', '新左營', '高鐵左營'], lat: 22.6873, lon: 120.3077, label: '高鐵左營站' },
+      { keys: ['高鐵桃園站', '桃園高鐵', '青埔高鐵'], lat: 25.0126, lon: 121.2143, label: '高鐵桃園站' },
+      { keys: ['高鐵新竹站', '新竹高鐵', '六家高鐵'], lat: 24.8081, lon: 121.0402, label: '高鐵新竹站' },
+      { keys: ['高鐵苗栗站', '苗栗高鐵', '後龍高鐵'], lat: 24.6062, lon: 120.8245, label: '高鐵苗栗站' },
+      { keys: ['高鐵彰化站', '彰化高鐵', '田中高鐵'], lat: 23.8744, lon: 120.5758, label: '高鐵彰化站' },
+      { keys: ['高鐵嘉義站', '嘉義高鐵', '太保高鐵'], lat: 23.4593, lon: 120.3233, label: '高鐵嘉義站' },
+      { keys: ['高鐵台南站', '台南高鐵', '沙崙高鐵'], lat: 22.9244, lon: 120.2856, label: '高鐵台南站' },
+      { keys: ['台北車站', '臺北車站', '台北火車站', '臺北火車站', '北車'], lat: 25.0478, lon: 121.5170, label: '台北車站' },
+      { keys: ['基隆車站', '基隆火車站'], lat: 25.1317, lon: 121.7393, label: '基隆車站' },
+      { keys: ['南港車站', '南港火車站', '高鐵南港站'], lat: 25.0531, lon: 121.6070, label: '南港車站' },
+      { keys: ['松山車站', '松山火車站'], lat: 25.0497, lon: 121.5777, label: '松山車站' },
+      { keys: ['樹林車站', '樹林火車站'], lat: 24.9912, lon: 121.4244, label: '樹林車站' },
+      { keys: ['鶯歌車站', '鶯歌火車站'], lat: 24.9547, lon: 121.3551, label: '鶯歌車站' },
+      { keys: ['桃園車站', '桃園火車站'], lat: 24.9892, lon: 121.3135, label: '桃園車站' },
+      { keys: ['中壢車站', '中壢火車站'], lat: 24.9537, lon: 121.2255, label: '中壢車站' },
+      { keys: ['新竹車站', '新竹火車站'], lat: 24.8016, lon: 120.9716, label: '新竹車站' },
+      { keys: ['苗栗車站', '苗栗火車站'], lat: 24.5700, lon: 120.8224, label: '苗栗車站' },
+      { keys: ['豐原車站', '豐原火車站'], lat: 24.2542, lon: 120.7228, label: '豐原車站' },
+      { keys: ['台中車站', '臺中車站', '台中火車站', '臺中火車站'], lat: 24.1368, lon: 120.6850, label: '台中車站' },
+      { keys: ['彰化車站', '彰化火車站'], lat: 24.0816, lon: 120.5385, label: '彰化車站' },
+      { keys: ['員林車站', '員林火車站'], lat: 23.9594, lon: 120.5700, label: '員林車站' },
+      { keys: ['斗六車站', '斗六火車站'], lat: 23.7118, lon: 120.5411, label: '斗六車站' },
+      { keys: ['嘉義車站', '嘉義火車站'], lat: 23.4791, lon: 120.4412, label: '嘉義車站' },
+      { keys: ['新營車站', '新營火車站'], lat: 23.3067, lon: 120.3230, label: '新營車站' },
+      { keys: ['台南車站', '臺南車站', '台南火車站', '臺南火車站'], lat: 22.9971, lon: 120.2126, label: '台南車站' },
+      { keys: ['高雄車站', '高雄火車站'], lat: 22.6396, lon: 120.3021, label: '高雄車站' },
+      { keys: ['屏東車站', '屏東火車站'], lat: 22.6693, lon: 120.4862, label: '屏東車站' },
+      { keys: ['宜蘭車站', '宜蘭火車站'], lat: 24.7545, lon: 121.7582, label: '宜蘭車站' },
+      { keys: ['羅東車站', '羅東火車站'], lat: 24.6778, lon: 121.7746, label: '羅東車站' },
+      { keys: ['花蓮車站', '花蓮火車站'], lat: 23.9929, lon: 121.6011, label: '花蓮車站' },
+      { keys: ['台東車站', '臺東車站', '台東火車站', '臺東火車站'], lat: 22.7932, lon: 121.1232, label: '台東車站' },
+      { keys: ['松山機場', '臺北松山機場'], lat: 25.0631, lon: 121.5525, label: '松山機場' },
+      { keys: ['土城', '永寧'], lat: 24.9722, lon: 121.4433, label: '土城區' },
+      { keys: ['鶯歌', '鶯歌老街'], lat: 24.9554, lon: 121.3547, label: '鶯歌區' }
+    ];
+    const norm = raw.replace(/^台灣|^臺灣/, '').replace(/號{2,}/g, '號').replace(/\s+/g, '');
+    const normStation = norm.replace(/火車站/g, '車站');
+    const hasSpecificStreetOrPoi = /([路街大道巷弄號]|一段|二段|三段|四段|五段|六段|醫院|學校|大學|公司|工廠|公園|市場|百貨|飯店|旅館)/.test(norm);
+    const exactKnown = knownPlaces.find(p => p.keys.some(k => norm === k || normStation === k || (norm.includes(k) && (k.length >= 4 || (!hasSpecificStreetOrPoi && norm.length <= 6)))));
+    if (exactKnown) {
+      return { lat: exactKnown.lat, lon: exactKnown.lon, label: raw };
+    }
+
+    const districtPrefixMap = [
+      { d: '三峽', full: '新北市三峽區' },
+      { d: '土城', full: '新北市土城區' },
+      { d: '板橋', full: '新北市板橋區' },
+      { d: '中和', full: '新北市中和區' },
+      { d: '永和', full: '新北市永和區' },
+      { d: '新店', full: '新北市新店區' },
+      { d: '樹林', full: '新北市樹林區' },
+      { d: '鶯歌', full: '新北市鶯歌區' },
+      { d: '新莊', full: '新北市新莊區' },
+      { d: '三重', full: '新北市三重區' },
+      { d: '蘆洲', full: '新北市蘆洲區' },
+      { d: '淡水', full: '新北市淡水區' },
+      { d: '汐止', full: '新北市汐止區' },
+      { d: '林口', full: '新北市林口區' },
+      { d: '五股', full: '新北市五股區' },
+      { d: '泰山', full: '新北市泰山區' }
+    ];
+    let expandedPrefixed = norm;
+    for (const item of districtPrefixMap) {
+      if (expandedPrefixed.startsWith(item.d) && !expandedPrefixed.startsWith(item.d + '區')) {
+        expandedPrefixed = item.full + expandedPrefixed.slice(item.d.length);
+        break;
+      }
+    }
+
+    const withRoadWord = expandedPrefixed.replace(/([^\d路街大道])([一二三四五六七八九十\d]+段)/g, '$1路$2');
+    const noDashHouse = withRoadWord.replace(/(\d+)(?:-|之)\d+號/g, '$1號');
+    const strippedLaneHouse = noDashHouse
+      .replace(/(?:之\d+)?\d+(?:(?:-|之)\d+)?[號樓層F室]/g, '')
+      .replace(/\d+(?:(?:-|之)\d+)?弄/g, '')
+      .replace(/\d+(?:(?:-|之)\d+)?巷/g, '');
+    const strippedSection = strippedLaneHouse
+      .replace(/(?:一|二|三|四|五|六|七|八|九|十|[1-9]\d?)段/g, '');
+    const cityDistrictOnly = expandedPrefixed
+      .match(/^(?:台灣|臺灣)?(?:.{2,3}[市縣])(?:.{1,4}[區鄉鎮市])/)?.[0] || '';
+
+    const fetchJsonTimeout = async (url, ms = 4000) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
       try {
-        const q = `[out:json][timeout:4];(node(around:45,${lat},${lon})["addr:housenumber"];way(around:45,${lat},${lon})["addr:housenumber"];);out center 3;`;
-        const oRes = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
-        if (oRes.ok) {
-          const oData = await oRes.json();
-          let bestEl = null;
-          let bestDist = Infinity;
-          (oData.elements || []).forEach(el => {
-            const eLat = el.lat ?? el.center?.lat;
-            const eLon = el.lon ?? el.center?.lon;
-            if (typeof eLat === 'number' && typeof eLon === 'number') {
-              const d = haversineMeters(lat, lon, eLat, eLon);
-              if (d < bestDist) {
-                bestDist = d;
-                bestEl = el;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
+      }
+    };
+
+    const biasLat = lastSmoothPoint ? lastSmoothPoint.lat : 24.9333;
+    const biasLon = lastSmoothPoint ? lastSmoothPoint.lon : 121.3694;
+
+    // 精準門牌與路段並行極速查詢（含門牌＋純路名段數並行競速，避免門牌缺失時退回整個行政區中心）
+    const primaryQueries = Array.from(new Set([
+      noDashHouse,
+      withRoadWord,
+      strippedLaneHouse,
+      strippedLaneHouse.replace(/台/g, '臺')
+    ].filter(q => q && q.length >= 2)));
+
+    for (const q of primaryQueries) {
+      const isStreetOnlyFallback = (q === strippedLaneHouse || q === strippedLaneHouse.replace(/台/g, '臺')) && /\d+號/.test(norm);
+      try {
+        const result = await Promise.any([
+          fetchJsonTimeout(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&accept-language=zh-TW`, 3800)
+            .then(arr => {
+              if (Array.isArray(arr) && arr.length > 0 && !isNaN(Number(arr[0].lat))) {
+                return { lat: Number(arr[0].lat), lon: Number(arr[0].lon), label: raw, streetFallback: isStreetOnlyFallback ? q : '' };
               }
-            }
-          });
-          if (bestEl && bestEl.tags && bestEl.tags['addr:housenumber']) {
-            const hNum = `${String(bestEl.tags['addr:housenumber']).replace(/號+$/g, '')}號`;
-            return bestDist <= 18 ? `${baseRoadLabel}${hNum}` : `${baseRoadLabel}${hNum}附近`;
-          }
+              throw new Error('empty');
+            }),
+          fetchJsonTimeout(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${biasLat}&lon=${biasLon}&limit=3`, 3800)
+            .then(pData => {
+              const feat = (pData.features || []).find(f => {
+                const c = (f.properties && f.properties.countrycode) || '';
+                return !c || c.toUpperCase() === 'TW';
+              }) || (pData.features && pData.features[0]);
+              if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
+                const [lon, lat] = feat.geometry.coordinates;
+                if (!isNaN(Number(lat)) && !isNaN(Number(lon))) {
+                  return { lat: Number(lat), lon: Number(lon), label: raw, streetFallback: isStreetOnlyFallback ? q : '' };
+                }
+              }
+              throw new Error('empty');
+            })
+        ]);
+        if (result) return result;
+      } catch (e) {}
+    }
+
+    // 若段數也查無結果，退回不含段數之路名或行政區查詢
+    const fallbackQueries = Array.from(new Set([
+      strippedSection,
+      cityDistrictOnly,
+      cityDistrictOnly.replace(/台/g, '臺')
+    ].filter(q => q && q.length >= 2 && !primaryQueries.includes(q))));
+
+    for (const q of fallbackQueries) {
+      try {
+        const arr = await fetchJsonTimeout(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&accept-language=zh-TW`, 3500);
+        if (Array.isArray(arr) && arr.length > 0) {
+          return { lat: Number(arr[0].lat), lon: Number(arr[0].lon), label: raw, streetFallback: q };
         }
       } catch (e) {}
     }
 
-    return baseRoadLabel;
+    const areaFallback = [
+      { keys: ['土城'], lat: 24.9722, lon: 121.4433 },
+      { keys: ['三峽'], lat: 24.9333, lon: 121.3694 },
+      { keys: ['鶯歌'], lat: 24.9554, lon: 121.3547 },
+      { keys: ['樹林'], lat: 24.9912, lon: 121.4205 },
+      { keys: ['麥寮'], lat: 23.7512, lon: 120.2534 },
+      { keys: ['虎尾'], lat: 23.7081, lon: 120.4375 },
+      { keys: ['斗六'], lat: 23.7092, lon: 120.5433 },
+      { keys: ['北港'], lat: 23.5678, lon: 120.3025 },
+      { keys: ['西螺'], lat: 23.7978, lon: 120.4639 },
+      { keys: ['台北', '臺北', '新北', '板橋', '中和', '永和', '新店', '淡水', '基隆'], lat: 25.0330, lon: 121.5654 },
+      { keys: ['桃園', '中壢', '青埔', '機場'], lat: 24.9936, lon: 121.3010 },
+      { keys: ['新竹', '竹北'], lat: 24.8138, lon: 120.9675 },
+      { keys: ['苗栗'], lat: 24.5602, lon: 120.8214 },
+      { keys: ['台中', '臺中', '烏日'], lat: 24.1477, lon: 120.6736 },
+      { keys: ['彰化', '員林', '田中'], lat: 24.0518, lon: 120.5161 },
+      { keys: ['雲林'], lat: 23.7092, lon: 120.5313 },
+      { keys: ['嘉義', '太保'], lat: 23.4801, lon: 120.4491 },
+      { keys: ['台南', '臺南', '永康', '歸仁'], lat: 22.9997, lon: 120.2270 },
+      { keys: ['高雄', '左營', '鳳山', '小港'], lat: 22.6273, lon: 120.3014 }
+    ];
+    const matchedArea = areaFallback.find(c => c.keys.some(k => norm.includes(k)));
+    if (matchedArea) {
+      return { lat: matchedArea.lat, lon: matchedArea.lon, label: raw, streetFallback: matchedArea.keys[0] };
+    }
+
+    return null;
   }
 
   async function checkGeoRoad(lat, lon) {
@@ -3133,33 +3353,61 @@
       cityDistrictOnly.replace(/台/g, '臺')
     ].filter(q => q && q.length >= 2)));
 
-    for (const q of candidates) {
+    const fetchJsonTimeout = async (url, ms = 4000) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
       try {
-        const twUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&accept-language=zh-TW`;
-        const res = await fetch(twUrl, { headers: { 'Accept': 'application/json' } });
-        if (res.ok) {
-          const arr = await res.json();
-          if (Array.isArray(arr) && arr.length > 0) {
-            return { lat: Number(arr[0].lat), lon: Number(arr[0].lon), label: raw };
-          }
-        }
-      } catch (e) {}
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
+      }
+    };
 
+    const biasLat = lastSmoothPoint ? lastSmoothPoint.lat : 24.9333;
+    const biasLon = lastSmoothPoint ? lastSmoothPoint.lon : 121.3694;
+
+    // 精準門牌與路段並行極速查詢（最多取前 4 組變體同時競速，避免逐一排隊超時）
+    const primaryQueries = candidates.slice(0, 4);
+    for (const q of primaryQueries) {
       try {
-        const biasLat = lastSmoothPoint ? lastSmoothPoint.lat : 24.9333;
-        const biasLon = lastSmoothPoint ? lastSmoothPoint.lon : 121.3694;
-        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${biasLat}&lon=${biasLon}&limit=3`;
-        const pRes = await fetch(photonUrl);
-        if (pRes.ok) {
-          const pData = await pRes.json();
-          const feat = (pData.features || []).find(f => {
-            const c = (f.properties && f.properties.countrycode) || '';
-            return !c || c.toUpperCase() === 'TW';
-          }) || (pData.features && pData.features[0]);
-          if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
-            const [lon, lat] = feat.geometry.coordinates;
-            return { lat: Number(lat), lon: Number(lon), label: raw };
-          }
+        const result = await Promise.any([
+          fetchJsonTimeout(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&accept-language=zh-TW`, 3800)
+            .then(arr => {
+              if (Array.isArray(arr) && arr.length > 0 && !isNaN(Number(arr[0].lat))) {
+                return { lat: Number(arr[0].lat), lon: Number(arr[0].lon), label: raw };
+              }
+              throw new Error('empty');
+            }),
+          fetchJsonTimeout(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${biasLat}&lon=${biasLon}&limit=3`, 3800)
+            .then(pData => {
+              const feat = (pData.features || []).find(f => {
+                const c = (f.properties && f.properties.countrycode) || '';
+                return !c || c.toUpperCase() === 'TW';
+              }) || (pData.features && pData.features[0]);
+              if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
+                const [lon, lat] = feat.geometry.coordinates;
+                if (!isNaN(Number(lat)) && !isNaN(Number(lon))) {
+                  return { lat: Number(lat), lon: Number(lon), label: raw };
+                }
+              }
+              throw new Error('empty');
+            })
+        ]);
+        if (result) return result;
+      } catch (e) {}
+    }
+
+    // 若門牌號查無結果，退回路段或行政區並行查詢
+    const fallbackQueries = candidates.slice(4, 8);
+    for (const q of fallbackQueries) {
+      try {
+        const arr = await fetchJsonTimeout(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&countrycodes=tw&limit=1&accept-language=zh-TW`, 3500);
+        if (Array.isArray(arr) && arr.length > 0) {
+          return { lat: Number(arr[0].lat), lon: Number(arr[0].lon), label: raw };
         }
       } catch (e) {}
     }
@@ -3234,6 +3482,27 @@
         return;
       }
 
+      // 防呆：若起終點文字不同但座標幾乎重疊（< 50m），強制剝除門牌改以路名重新定位
+      if (startVal && endVal && startVal !== endVal && haversineMeters(startCoords.lat, startCoords.lon, endCoords.lat, endCoords.lon) < 50) {
+        const cleanStartRoad = startVal.replace(/\d+(?:(?:-|之)\d+)?[號樓層F室].*$/, '').trim();
+        const cleanEndRoad = endVal.replace(/\d+(?:(?:-|之)\d+)?[號樓層F室].*$/, '').trim();
+        if (cleanStartRoad && cleanStartRoad !== startVal) {
+          const reStart = await geocodeAddress(cleanStartRoad);
+          if (reStart) startCoords = { ...reStart, label: startVal, streetFallback: cleanStartRoad };
+        }
+        if (cleanEndRoad && cleanEndRoad !== endVal) {
+          const reEnd = await geocodeAddress(cleanEndRoad);
+          if (reEnd) Object.assign(endCoords, { ...reEnd, label: endVal, streetFallback: cleanEndRoad });
+        }
+      }
+
+      const fallbackTips = [];
+      if (startCoords.streetFallback) fallbackTips.push(`起點門牌無建檔，已自動改以「${startCoords.streetFallback}」估算`);
+      if (endCoords.streetFallback) fallbackTips.push(`終點門牌無建檔，已自動改以「${endCoords.streetFallback}」估算`);
+      const fallbackBannerHtml = fallbackTips.length > 0
+        ? `<div class="rounded-lg bg-amber-500/15 border border-amber-400/40 px-2.5 py-1 text-[11px] font-bold text-amber-300">ℹ️ ${esc(fallbackTips.join('；'))}</div>`
+        : '';
+
       targetEndCoords = { lat: endCoords.lat, lon: endCoords.lon, label: endCoords.label || endVal };
       lastDynamicRerouteTs = Date.now();
 
@@ -3241,8 +3510,11 @@
       let estMin = 0;
       let routeUsesHighway = false;
       try {
+        const osrmCtrl = new AbortController();
+        const osrmTimer = setTimeout(() => osrmCtrl.abort(), 5000);
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?overview=false&alternatives=3&steps=true&continue_straight=false`;
-        const rRes = await fetch(osrmUrl);
+        const rRes = await fetch(osrmUrl, { signal: osrmCtrl.signal });
+        clearTimeout(osrmTimer);
         const rData = await rRes.json();
         if (rData && rData.routes && rData.routes.length > 0) {
           const straightKm = haversineMeters(startCoords.lat, startCoords.lon, endCoords.lat, endCoords.lon) / 1000;
@@ -3317,6 +3589,7 @@
           </div>
         </div>
         <div class="space-y-1.5 pt-1">
+          ${fallbackBannerHtml}
           <div class="text-slate-300">預估里程 <strong class="text-sky-400">${km.toFixed(1)} km</strong>（約 ${estMin} 分）</div>
           <div class="rounded-xl bg-[#151e32] border border-amber-400/40 px-3 py-2 flex items-center justify-between gap-2">
             <span class="text-xs font-bold text-slate-300">預估車資</span>
@@ -3405,7 +3678,7 @@
 
     const activeEndCoord = (boundEndGpsCoords && endVal)
       ? boundEndGpsCoords
-      : (targetEndCoords && endVal ? { lat: targetEndCoords.lat, lon: targetEndCoords.lon } : null);
+      : null;
     const destNavParam = activeEndCoord
       ? `${activeEndCoord.lat.toFixed(6)},${activeEndCoord.lon.toFixed(6)}`
       : encodeURIComponent(endVal);
@@ -3790,7 +4063,7 @@
     });
 
     if (addedCount > 0 || removedCount > 0) {
-      if (appState.companyCache.length > 300) appState.companyCache.length = 300;
+      if (appState.companyCache.length > 2000) appState.companyCache.length = 2000;
       saveAppState();
     }
     return addedCount;
