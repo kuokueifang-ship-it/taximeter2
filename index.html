@@ -719,7 +719,7 @@
 
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.13</span></div>
+            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.14</span></div>
             <div id="updateCheckSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動檢查雲端最新版本</div>
           </div>
           <button type="button" onclick="checkAppUpdate(true)" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
@@ -734,7 +734,7 @@
   <div id="updateAvailableModal" class="hidden fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-4 shadow-2xl border border-amber-400/60 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.13</span></h3>
+        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.14</span></h3>
         <button type="button" onclick="closeModal('updateAvailableModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
       </div>
       <div class="bg-[#0d1424] rounded-2xl p-3 border border-slate-700/70 space-y-1.5 text-xs">
@@ -809,7 +809,7 @@
 
 <script>
   const APP_KEY = 'taximeter_dark_cockpit_v1';
-  const APP_VERSION = '1.0.13';
+  const APP_VERSION = '1.0.14';
   const UPDATE_MANIFEST_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/version.json';
   const SHARED_POIS_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/shared_pois.json';
   const DEFAULT_UPDATE_URL = 'https://reurl.cc/aEQ6Zl';
@@ -3727,6 +3727,27 @@
   function mergeSharedPoisList(incomingList) {
     if (!Array.isArray(incomingList)) return 0;
     if (!Array.isArray(appState.companyCache)) appState.companyCache = [];
+
+    // 先建立最新雲端清單的標準化比對集合，並清除本機已被雲端刪除的舊共享項目
+    const incomingNames = new Set();
+    const incomingAddrs = new Set();
+    incomingList.forEach(entry => {
+      if (!entry || typeof entry !== 'object') return;
+      const n = String(entry.name || entry.alias || '').trim();
+      const a = sanitizeTaiwanAddress(entry.addr || entry.address || n);
+      if (n) incomingNames.add(normalizePoiCompareStr(n));
+      if (a) incomingAddrs.add(normalizePoiCompareStr(a));
+    });
+
+    const beforeLen = appState.companyCache.length;
+    appState.companyCache = appState.companyCache.filter(item => {
+      if (!item.shared) return true; // 司機自己本機記憶的完整保留
+      const n = normalizePoiCompareStr(item.alias);
+      const a = normalizePoiCompareStr(item.addr);
+      return incomingNames.has(n) || incomingAddrs.has(a);
+    });
+    const removedCount = beforeLen - appState.companyCache.length;
+
     const existingNames = new Set();
     const existingAddrs = new Set();
 
@@ -3768,7 +3789,7 @@
       addedCount++;
     });
 
-    if (addedCount > 0) {
+    if (addedCount > 0 || removedCount > 0) {
       if (appState.companyCache.length > 300) appState.companyCache.length = 300;
       saveAppState();
     }
