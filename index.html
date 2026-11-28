@@ -65,6 +65,7 @@
     color: #0369a1 !important;
   }
   body.theme-light #fareAmount { color: #b45309 !important; filter: none !important; }
+  body.theme-light #chkTotalWrap { color: #b45309 !important; }
   body.theme-light #btnLocalRoad.bg-sky-600,
   body.theme-light #btnHighwayRoad.bg-sky-600 {
     background-color: #0284c7 !important;
@@ -427,13 +428,13 @@
             <span class="text-slate-400">跳錶基本車資：</span>
             <span class="mono font-bold text-slate-100">NT$ <span id="chkMeterVal">0</span></span>
           </div>
-          <div class="flex justify-between">
+          <div class="flex justify-between items-center">
             <span class="text-slate-400">國道通行費 (eTag)：</span>
-            <span class="mono font-black text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded">NT$ <span id="chkTollVal">0</span></span>
+            <span class="mono font-black text-white bg-sky-700 border border-sky-500 px-2 py-0.5 rounded-lg shadow-xs">NT$ <span id="chkTollVal">0</span></span>
           </div>
           <div class="flex justify-between border-t border-slate-700/80 pt-1 text-sm font-black">
             <span>應收總計：</span>
-            <span class="mono text-amber-400">NT$ <span id="chkTotalVal">0</span></span>
+            <span id="chkTotalWrap" class="mono text-amber-400">NT$ <span id="chkTotalVal">0</span></span>
           </div>
         </div>
 
@@ -704,9 +705,21 @@
           <input type="file" id="backupFileInput" accept=".json" class="hidden" onchange="importBackupJson(event)">
         </div>
 
+        <div class="bg-[#0d1424] rounded-2xl border border-sky-500/40 p-3 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-black text-sky-400">🌐 車隊共享雲端地標庫</div>
+              <div id="sharedPoiSyncSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動同步版主收錄之公司門牌</div>
+            </div>
+            <button type="button" onclick="syncSharedPoisFromCloud(true)" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
+              🔄 同步地標
+            </button>
+          </div>
+        </div>
+
         <div class="bg-[#0d1424] rounded-2xl border border-slate-700/70 p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.12</span></div>
+            <div class="text-xs font-black text-slate-200">📱 目前程式版本：<span id="appVersionBadge" class="text-amber-400 mono">v1.0.13</span></div>
             <div id="updateCheckSubtext" class="text-[11px] text-slate-400 mt-0.5">開啟時自動檢查雲端最新版本</div>
           </div>
           <button type="button" onclick="checkAppUpdate(true)" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black whitespace-nowrap shrink-0 shadow active:scale-95">
@@ -721,7 +734,7 @@
   <div id="updateAvailableModal" class="hidden fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-4">
     <div class="bg-[#151e32] text-slate-100 rounded-3xl w-full max-w-sm p-4 shadow-2xl border border-amber-400/60 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.12</span></h3>
+        <h3 class="font-black text-base text-amber-400">🎉 發現新版本 <span id="newVersionTag" class="mono">v1.0.13</span></h3>
         <button type="button" onclick="closeModal('updateAvailableModal')" class="w-8 h-8 rounded-full bg-slate-800 font-bold text-slate-300">✕</button>
       </div>
       <div class="bg-[#0d1424] rounded-2xl p-3 border border-slate-700/70 space-y-1.5 text-xs">
@@ -796,8 +809,9 @@
 
 <script>
   const APP_KEY = 'taximeter_dark_cockpit_v1';
-  const APP_VERSION = '1.0.12';
+  const APP_VERSION = '1.0.13';
   const UPDATE_MANIFEST_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/version.json';
+  const SHARED_POIS_URL = 'https://gist.githubusercontent.com/kuokueifang-ship-it/6b92ed0073d93aa7cb1c58907482b7b8/raw/shared_pois.json';
   const DEFAULT_UPDATE_URL = 'https://reurl.cc/aEQ6Zl';
   const ETAG_RATE_PER_KM = 1.2;
 
@@ -1329,7 +1343,6 @@
       const re = new RegExp(en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       out = out.replace(re, zh);
     }
-    // 清理殘留的英文 District / Village / Township 尾綴
     out = out.replace(/\b[A-Za-z]+\s*(?:District|Village|Township|City|County)\b/gi, '');
     return out;
   }
@@ -1340,7 +1353,6 @@
     if (innerMatch) s = innerMatch[1].trim();
     s = translateTaiwanEnToZh(s);
     s = s.replace(/^台灣|^臺灣/, '').trim();
-    // 移除中文字與數字/符號之間的多餘空白（例如「中央路三段 38 號」→「中央路三段38號」）
     s = s.replace(/([\u4e00-\u9fa5\d\-－之])\s+(?=[\u4e00-\u9fa5\d\-－之號樓層F室巷弄段])/g, '$1');
     s = s.replace(/\s+/g, ' ').trim();
     return s;
@@ -1363,7 +1375,7 @@
       appState.companyCache[idx] = entry;
     } else {
       appState.companyCache.unshift(entry);
-      if (appState.companyCache.length > 120) appState.companyCache.length = 120;
+      if (appState.companyCache.length > 300) appState.companyCache.length = 300;
     }
     saveAppState();
   }
@@ -1410,13 +1422,30 @@
     const candidates = [];
     const seenKeys = new Set();
 
+    // 決定距離排序基準點：優先使用目前 GPS，其次使用上車起點座標或上車起點文字反查座標
+    let refPoint = lastSmoothPoint
+      ? { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon }
+      : (boundStartGpsCoords ? { lat: boundStartGpsCoords.lat, lon: boundStartGpsCoords.lon } : null);
+    let refAddrText = detectedRoadName || document.getElementById('inputStartAddr')?.value.trim() || '';
+
+    if (!refPoint && which === 'end') {
+      const startText = document.getElementById('inputStartAddr')?.value.trim() || '';
+      if (startText) {
+        const sc = await geocodeAddress(startText);
+        if (sc) {
+          refPoint = { lat: sc.lat, lon: sc.lon };
+          refAddrText = startText;
+        }
+      }
+    }
+
     (appState.companyCache || []).forEach(item => {
       if (item.alias.toLowerCase().includes(normQ) || item.addr.toLowerCase().includes(normQ)) {
         const key = `${item.alias}|${item.addr}`;
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           candidates.push({
-            source: 'memory',
+            source: item.shared ? 'shared' : 'memory',
             title: item.alias,
             addr: sanitizeTaiwanAddress(item.addr),
             lat: item.lat,
@@ -1446,11 +1475,12 @@
       }
     });
 
-    renderPoiSuggestBox(which, query, candidates, true);
+    renderPoiSuggestBox(which, query, candidates, true, refPoint);
 
-    const biasLat = lastSmoothPoint ? lastSmoothPoint.lat : 24.9333;
-    const biasLon = lastSmoothPoint ? lastSmoothPoint.lon : 121.3694;
-    const localCityPrefix = (detectedRoadName.match(/^(.{2,3}[市縣])/) || [])[1] || '';
+    const biasLat = refPoint ? refPoint.lat : 24.9333;
+    const biasLon = refPoint ? refPoint.lon : 121.3694;
+    const localCityPrefix = (refAddrText.match(/^(.{2,3}[市縣])/) || [])[1] || '';
+    const localDistPrefix = (refAddrText.match(/^.{2,3}[市縣](.{1,4}[區鄉鎮市])/) || [])[1] || '';
     const cjkChars = Array.from(new Set((query.match(/[\u4e00-\u9fa5]/g) || [])));
 
     const isRelevantResult = (titleStr, addrStr) => {
@@ -1462,9 +1492,9 @@
       return false;
     };
 
-    const fetchPhoton = async () => {
+    const fetchPhoton = async (searchStr) => {
       try {
-        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${biasLat}&lon=${biasLon}&limit=10`, {
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(searchStr)}&lat=${biasLat}&lon=${biasLon}&limit=20`, {
           headers: { 'Accept-Language': 'zh-TW,zh;q=0.9' }
         });
         if (!res.ok) return [];
@@ -1488,7 +1518,6 @@
           };
         }).filter(item => {
           if (!isRelevantResult(item.title, item.addr)) return false;
-          // 在 Android WebView 下若 Photon 仍回傳英文路名/地名（含連續 4 個以上英文字母），直接過濾掉交由中文 Nominatim 呈現
           if (/[A-Za-z]{4,}/.test(item.addr) && !/[A-Za-z]{2,}/.test(query)) return false;
           return true;
         });
@@ -1497,7 +1526,9 @@
 
     const fetchNominatim = async (searchStr) => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(searchStr)}&countrycodes=tw&addressdetails=1&limit=8&accept-language=zh-TW`);
+        // 加上附近矩形範圍優先加權（viewbox 約 ±0.25 度 ≈ 25 公里內優先），但不強制限制跨縣市搜尋
+        const viewbox = `${(biasLon - 0.25).toFixed(4)},${(biasLat + 0.25).toFixed(4)},${(biasLon + 0.25).toFixed(4)},${(biasLat - 0.25).toFixed(4)}`;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(searchStr)}&countrycodes=tw&viewbox=${viewbox}&addressdetails=1&limit=20&accept-language=zh-TW`);
         if (!res.ok) return [];
         const arr = await res.json();
         return (arr || []).map(item => {
@@ -1521,9 +1552,13 @@
       } catch (e) { return []; }
     };
 
-    const queriesToRun = [fetchNominatim(query), fetchPhoton()];
+    const queriesToRun = [fetchNominatim(query), fetchPhoton(query)];
     if (localCityPrefix && !query.includes(localCityPrefix)) {
       queriesToRun.unshift(fetchNominatim(`${localCityPrefix} ${query}`));
+      queriesToRun.unshift(fetchPhoton(`${localCityPrefix} ${query}`));
+    }
+    if (localDistPrefix && !query.includes(localDistPrefix)) {
+      queriesToRun.unshift(fetchNominatim(`${localCityPrefix}${localDistPrefix} ${query}`));
     }
 
     const resultGroups = await Promise.all(queriesToRun);
@@ -1538,31 +1573,38 @@
       }
     });
 
-    if (lastSmoothPoint) {
+    // 依照距離基準點（目前位置或上車起點）由近到遠嚴格排列
+    if (refPoint) {
+      candidates.forEach(c => {
+        if (typeof c.lat === 'number' && typeof c.lon === 'number' && !isNaN(c.lat) && !isNaN(c.lon)) {
+          c._distMeters = haversineMeters(refPoint.lat, refPoint.lon, c.lat, c.lon);
+        } else {
+          c._distMeters = Infinity;
+        }
+      });
       candidates.sort((a, b) => {
+        const da = a._distMeters ?? Infinity;
+        const db = b._distMeters ?? Infinity;
+        if (da !== db) return da - db;
         if (a.source !== 'online' && b.source === 'online') return -1;
         if (a.source === 'online' && b.source !== 'online') return 1;
-        if (a.lat && a.lon && b.lat && b.lon) {
-          const da = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, a.lat, a.lon);
-          const db = haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, b.lat, b.lon);
-          return da - db;
-        }
         return 0;
       });
     }
 
-    renderPoiSuggestBox(which, query, candidates.slice(0, 6), false);
+    renderPoiSuggestBox(which, query, candidates.slice(0, 8), false, refPoint);
   }
 
-  function renderPoiSuggestBox(which, query, list, isLoading) {
+  function renderPoiSuggestBox(which, query, list, isLoading, refPoint = null) {
     const box = document.getElementById(which === 'start' ? 'startPoiSuggestBox' : 'endPoiSuggestBox');
     if (!box) return;
     poiCandidatesMap[which] = list;
     const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query + ' 地址')}`;
+    const activeRef = refPoint || (lastSmoothPoint ? { lat: lastSmoothPoint.lat, lon: lastSmoothPoint.lon } : boundStartGpsCoords);
 
     const headerHtml = `
       <div class="flex items-center justify-between px-1.5 py-0.5 text-[11px] text-slate-400">
-        <span>${isLoading ? '⏳ 正在搜尋台灣公司與地標地址...' : '🔎 點選下方地點自動帶入完整地址：'}</span>
+        <span>${isLoading ? '⏳ 正在搜尋附近地點（依距離由近到遠）...' : '🔎 依距離由近到遠排列（點選自動帶入）：'}</span>
         <button type="button" onclick="hideAllPoiSuggestBoxes()" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold whitespace-nowrap shrink-0">✕ 關閉</button>
       </div>
     `;
@@ -1570,13 +1612,18 @@
     const itemsHtml = list.length === 0
       ? (isLoading ? '' : `<div class="px-2 py-1.5 text-[11px] text-slate-400">地圖庫暫無「${esc(query)}」建檔，可點下方按鈕用 Google 查完整門牌後貼上：</div>`)
       : list.map((c, idx) => {
-          const tag = c.source === 'memory'
-            ? '<span class="poi-tag-amber px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black shrink-0">已記憶</span>'
-            : (c.source === 'landmark'
-              ? '<span class="poi-tag-emerald px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black shrink-0">常用點</span>'
-              : '<span class="poi-tag-sky px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-black shrink-0">地標</span>');
-          const distTag = (lastSmoothPoint && c.lat && c.lon)
-            ? `<span class="text-[10px] text-slate-400 shrink-0">${(haversineMeters(lastSmoothPoint.lat, lastSmoothPoint.lon, c.lat, c.lon) / 1000).toFixed(1)} km</span>`
+          const tag = c.source === 'shared'
+            ? '<span class="poi-tag-sky px-1.5 py-0.5 rounded bg-sky-500/25 text-sky-300 text-[10px] font-black shrink-0">🌐 車隊共享</span>'
+            : (c.source === 'memory'
+              ? '<span class="poi-tag-amber px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black shrink-0">已記憶</span>'
+              : (c.source === 'landmark'
+                ? '<span class="poi-tag-emerald px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black shrink-0">常用點</span>'
+                : '<span class="poi-tag-sky px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-black shrink-0">地標</span>'));
+          const distMeters = (typeof c._distMeters === 'number' && isFinite(c._distMeters))
+            ? c._distMeters
+            : ((activeRef && typeof c.lat === 'number' && typeof c.lon === 'number') ? haversineMeters(activeRef.lat, activeRef.lon, c.lat, c.lon) : null);
+          const distTag = distMeters !== null
+            ? `<span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-black shrink-0">📏 距 ${distMeters < 1000 ? Math.round(distMeters) + ' m' : (distMeters / 1000).toFixed(1) + ' km'}</span>`
             : '';
           const coordBadge = (typeof c.lat === 'number' && typeof c.lon === 'number' && !isNaN(c.lat))
             ? '<span class="text-[10px] text-emerald-500 font-bold shrink-0">🎯 精準座標</span>'
@@ -1588,7 +1635,7 @@
                   ${tag}
                   <span class="font-black text-sm text-slate-100 truncate">${esc(c.title)}</span>
                 </div>
-                ${(coordBadge || distTag) ? `<div class="flex items-center gap-2 pl-0.5">${coordBadge}${distTag}</div>` : ''}
+                ${(coordBadge || distTag) ? `<div class="flex items-center gap-2 pl-0.5">${distTag}${coordBadge}</div>` : ''}
                 <div class="text-[11px] text-slate-300 leading-snug break-all pl-0.5">📍 ${esc(c.addr)}</div>
               </button>
               <button type="button" onclick="editPoiCandidateAddress('${which}', ${idx})" class="poi-edit-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-black text-amber-300 whitespace-nowrap shrink-0 active:scale-95">
@@ -3673,6 +3720,84 @@
     return true;
   }
 
+  function normalizePoiCompareStr(str) {
+    return String(str || '').replace(/臺/g, '台').replace(/\s+/g, '').toLowerCase();
+  }
+
+  function mergeSharedPoisList(incomingList) {
+    if (!Array.isArray(incomingList)) return 0;
+    if (!Array.isArray(appState.companyCache)) appState.companyCache = [];
+    const existingNames = new Set();
+    const existingAddrs = new Set();
+
+    appState.companyCache.forEach(item => {
+      if (item.alias) existingNames.add(normalizePoiCompareStr(item.alias));
+      if (item.addr) existingAddrs.add(normalizePoiCompareStr(item.addr));
+    });
+    (appState.landmarks || []).forEach(lm => {
+      const n = getLandmarkDisplayName(lm);
+      const a = getLandmarkFullAddress(lm);
+      if (n) existingNames.add(normalizePoiCompareStr(n));
+      if (a) existingAddrs.add(normalizePoiCompareStr(a));
+    });
+
+    let addedCount = 0;
+    incomingList.forEach(entry => {
+      if (!entry || typeof entry !== 'object') return;
+      const rawName = String(entry.name || entry.alias || '').trim();
+      const rawAddr = sanitizeTaiwanAddress(entry.addr || entry.address || rawName);
+      if (!rawName && !rawAddr) return;
+      const finalName = rawName || rawAddr;
+      const finalAddr = rawAddr || finalName;
+      const normN = normalizePoiCompareStr(finalName);
+      const normA = normalizePoiCompareStr(finalAddr);
+
+      // 自動過濾同名或同地址的重複項目（含「台/臺」與空白標準化）
+      if (existingNames.has(normN) || existingAddrs.has(normA)) return;
+
+      existingNames.add(normN);
+      existingAddrs.add(normA);
+      appState.companyCache.unshift({
+        alias: finalName,
+        addr: finalAddr,
+        lat: typeof entry.lat === 'number' && !isNaN(entry.lat) ? entry.lat : null,
+        lon: typeof entry.lon === 'number' && !isNaN(entry.lon) ? entry.lon : null,
+        shared: true,
+        updatedAt: Date.now()
+      });
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      if (appState.companyCache.length > 300) appState.companyCache.length = 300;
+      saveAppState();
+    }
+    return addedCount;
+  }
+
+  async function syncSharedPoisFromCloud(isManual = false) {
+    const subEl = document.getElementById('sharedPoiSyncSubtext');
+    if (isManual && subEl) subEl.textContent = '正在連線同步車隊雲端地標...';
+    try {
+      const sep = SHARED_POIS_URL.includes('?') ? '&' : '?';
+      const res = await fetch(`${SHARED_POIS_URL}${sep}_t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const list = await res.json();
+      const added = mergeSharedPoisList(list);
+      if (subEl) {
+        subEl.textContent = added > 0
+          ? `已同步新增 ${added} 筆車隊共享地標！`
+          : `車隊地標已同步（共 ${Array.isArray(list) ? list.length : 0} 筆，無新增重複項）`;
+      }
+      if (isManual) {
+        toast(added > 0 ? `✅ 已同步匯入 ${added} 筆車隊共享地標！` : '✅ 車隊共享地標已是最新（重複項已自動過濾）');
+      }
+    } catch (e) {
+      if (subEl) subEl.textContent = '開啟時自動同步版主收錄之公司門牌';
+      if (isManual) toast('無法連線同步車隊地標，請確認網路連線');
+    }
+  }
+
   loadAppState();
   restoreRouteDraftFromStorage();
   renderLandmarkChips();
@@ -3692,6 +3817,7 @@
   window.addEventListener('pagehide', () => syncRouteDraftToStorage());
   setTimeout(promptResumeInterruptedTrip, 600);
   setTimeout(() => checkAppUpdate(false), 2500);
+  setTimeout(() => syncSharedPoisFromCloud(false), 3200);
 </script>
 
 <!-- ===== 試用到期鎖定與解鎖驗證模組 START ===== -->
@@ -3711,247 +3837,271 @@
   #trialLockOverlay.show {
     display: flex;
   }
-  .lock-card {
-    width: 100%;
-    max-width: 400px;
+  .trial-card {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    border-radius: 18px;
+    max-width: 420px;
+    width: 100%;
+    padding: 26px 22px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    text-align: center;
   }
-  .lock-title {
-    margin: 0 0 8px;
-    font-size: 1.3rem;
-    color: #f87171;
+  .trial-title {
+    font-size: 21px;
+    font-weight: 700;
+    color: #fbbf24;
+    margin-bottom: 10px;
   }
-  .lock-desc {
-    margin: 0 0 16px;
-    font-size: 0.92rem;
+  .trial-desc {
+    font-size: 14px;
     color: #cbd5e1;
-    line-height: 1.5;
+    line-height: 1.6;
+    margin-bottom: 16px;
   }
-  .device-box {
+  .trial-device-box {
     background: #0f172a;
-    border: 1px solid #475569;
+    border: 1px dashed #475569;
     border-radius: 10px;
     padding: 12px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    margin-bottom: 14px;
   }
-  .device-id-text {
-    font-size: 1.2rem;
+  .trial-device-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+  }
+  .trial-device-code {
+    font-size: 24px;
     font-weight: 800;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     color: #38bdf8;
-    user-select: all;
+    font-family: monospace;
   }
-  .lock-btn {
-    border: none;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .copy-btn {
+  .trial-copy-btn {
+    margin-top: 8px;
     background: #334155;
     color: #f8fafc;
-    padding: 7px 11px;
-    font-size: 0.82rem;
-    white-space: nowrap;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
   }
-  .unlock-input {
+  .trial-copy-btn:hover {
+    background: #475569;
+  }
+  .trial-line-box {
+    background: rgba(6, 199, 85, 0.14);
+    border: 1px solid rgba(6, 199, 85, 0.45);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #a7f3d0;
+  }
+  .trial-line-id {
+    font-size: 17px;
+    font-weight: 800;
+    color: #4ade80;
+    letter-spacing: 1px;
+  }
+  .trial-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 11px 13px;
+    padding: 12px 14px;
     border-radius: 10px;
     border: 1px solid #475569;
     background: #0f172a;
     color: #ffffff;
-    font-size: 1.05rem;
+    font-size: 18px;
+    text-align: center;
     letter-spacing: 2px;
-    text-transform: uppercase;
+    font-family: monospace;
     margin-bottom: 12px;
+    outline: none;
   }
-  .unlock-btn {
+  .trial-input:focus {
+    border-color: #fbbf24;
+  }
+  .trial-unlock-btn {
     width: 100%;
-    background: #16a34a;
-    color: #ffffff;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
   }
-  .lock-msg {
+  .trial-unlock-btn:hover {
+    filter: brightness(1.08);
+  }
+  .trial-msg {
     margin-top: 10px;
-    min-height: 20px;
-    font-size: 0.88rem;
-    color: #fca5a5;
+    font-size: 13px;
+    min-height: 18px;
   }
 </style>
-<div id="trialLockOverlay" aria-modal="true" role="dialog">
-  <div class="lock-card">
-    <h2 class="lock-title">⏰ 試用期已到期</h2>
-    <p class="lock-desc">
-      感謝您的使用，本版本試用期限已結束。請複製下方「裝置碼」並聯繫客服取得專屬解鎖碼：正式版每組500元永久使用權
-    </p>
 
-    <div class="device-box">
-      <div>
-        <div style="font-size:0.75rem;color:#94a3b8;">您的裝置碼</div>
-        <div class="device-id-text" id="lockDeviceIdDisplay">------</div>
-      </div>
-      <button type="button" class="lock-btn copy-btn" onclick="copyLockDeviceId()">複製裝置碼</button>
+<div id="trialLockOverlay">
+  <div class="trial-card">
+    <div class="trial-title">⏳ 14 天試用期已到期</div>
+    <div class="trial-desc">
+      感謝您的體驗！您的免費試用期限已結束。<br>
+      請複製下方裝置碼並聯繫客服取得正式版解鎖碼：
     </div>
 
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:16px;font-size:0.9rem;color:#e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <div>
-        <span style="color:#94a3b8;">聯繫客服 LINE ID：</span>
-        <strong style="color:#4ade80;user-select:all;">0988985290</strong>
-      </div>
-      <button type="button" class="lock-btn copy-btn" onclick="copyLineId()">複製 ID</button>
+    <div class="trial-device-box">
+      <div class="trial-device-label">您的專屬裝置碼（請提供給客服）</div>
+      <div class="trial-device-code" id="trialDeviceCode">------</div>
+      <button type="button" class="trial-copy-btn" id="trialCopyBtn">複製裝置碼</button>
     </div>
 
-    <input
-      type="text"
-      id="lockUnlockInput"
-      class="unlock-input"
-      placeholder="請輸入解鎖碼（例如 8K2P-9M4X）"
-      autocomplete="off"
-    />
-    <button type="button" class="lock-btn unlock-btn" onclick="submitUnlockCode()">立即解鎖</button>
-    <div class="lock-msg" id="lockStatusMsg"></div>
+    <div class="trial-line-box">
+      💬 客服 LINE ID：<span class="trial-line-id">0988985290</span>
+    </div>
+
+    <input type="text" id="trialUnlockInput" class="trial-input" placeholder="請輸入解鎖碼" maxlength="16" autocomplete="off" />
+    <button type="button" class="trial-unlock-btn" id="trialUnlockBtn">立即解鎖</button>
+    <div class="trial-msg" id="trialMsg"></div>
   </div>
 </div>
 
 <script>
-  (function () {
-    const _d = 14;
-    const _k = [104, 118, 116, 104, 124, 108, 103, 98, 114, 101, 47, 51, 49, 51, 48, 55, 56, 51, 49];
-    const _m = [35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 34, 34, 34, 34, 34, 34, 34, 34, 34];
-    const _f1 = "\x61\x70\x70\x5f\x74\x72\x69\x61\x6c\x5f\x66\x69\x72\x73\x74\x5f\x6f\x70\x65\x6e\x5f\x6d\x73\x5f\x76\x31";
-    const _f2 = "\x61\x70\x70\x5f\x74\x72\x69\x61\x6c\x5f\x64\x65\x76\x69\x63\x65\x5f\x69\x64\x5f\x76\x31";
-    const _f3 = "\x61\x70\x70\x5f\x74\x72\x69\x61\x6c\x5f\x75\x6e\x6c\x6f\x63\x6b\x65\x64\x5f\x76\x31";
+(function () {
+  var _0x9a1 = ["\x5f\x74\x6d\x5f\x73\x79\x73\x5f\x74\x30\x31", "\x5f\x74\x6d\x5f\x73\x79\x73\x5f\x64\x30\x31", "\x5f\x74\x6d\x5f\x73\x79\x73\x5f\x75\x30\x31", "\x54\x4d\x32\x30\x32\x36\x23\x53\x45\x43\x52\x45\x54\x5f\x4b\x45\x59\x5f\x39\x39\x38\x31", "\x30\x31\x32\x33\x34\x35\x36\x37\x38\x39\x41\x42\x43\x44\x45\x46\x47\x48\x4a\x4b\x4c\x4d\x4e\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a"];
+  var _0x14d = 14 * 86400000;
 
-    function _gId() {
-      let id = localStorage.getItem(_f2);
-      if (!id) {
-        const c = "\x41\x42\x43\x44\x45\x46\x47\x48\x4a\x4b\x4c\x4d\x4e\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x32\x33\x34\x35\x36\x37\x38\x39";
-        let g = "";
-        for (let i = 0; i < 6; i++) g += c.charAt(Math.floor(Math.random() * c.length));
-        id = g;
-        localStorage.setItem(_f2, id);
-      }
-      return id;
+  function _0x3c1(s) {
+    var h1 = 0x811c9dc5, h2 = 0x1b873593;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      h1 ^= c;
+      h1 = Math.imul(h1, 0x01000193);
+      h2 ^= (c + i);
+      h2 = Math.imul(h2, 0x85ebca6b);
     }
-
-    function _vSig(raw) {
-      const cid = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (!cid) return "";
-      let s = "";
-      for (let i = 0; i < _k.length; i++) s += String.fromCharCode(_k[i] ^ _m[i]);
-      const src = cid + "\x3a\x3a" + s;
-      let a = 0x811c9dc5, b = 0x1b873593;
-      for (let i = 0; i < src.length; i++) {
-        const ch = src.charCodeAt(i);
-        a ^= ch;
-        a = Math.imul(a, 0x01000193);
-        b ^= ch + i;
-        b = Math.imul(b, 0x85ebca6b);
-      }
-      const p1 = (a >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
-      const p2 = (b >>> 0).toString(36).toUpperCase().padStart(4, "0").slice(-4);
-      return p1 + "-" + p2;
+    var n = Math.abs((h1 >>> 0) ^ (h2 >>> 0));
+    var out = "";
+    var b = _0x9a1[4];
+    for (var j = 0; j < 6; j++) {
+      out += b[n % b.length];
+      n = Math.floor(n / b.length) + ((h1 >>> (j * 4)) & 0x0f);
     }
+    return out;
+  }
 
-    function _chk() {
-      try {
-        const id = _gId();
-        const exp = _vSig(id);
-        const sv = localStorage.getItem(_f3);
-        const ov = document.getElementById("trialLockOverlay");
-        if (sv && sv === exp) {
-          if (ov) ov.classList.remove("show");
-          return true;
-        }
-        const now = Date.now();
-        let fo = Number(localStorage.getItem(_f1) || 0);
-        if (!fo) {
-          fo = now;
-          localStorage.setItem(_f1, String(fo));
-        }
-        if ((now - fo) / 86400000 >= _d) {
-          const disp = document.getElementById("lockDeviceIdDisplay");
-          if (disp) disp.textContent = id;
-          if (ov) ov.classList.add("show");
-          return false;
-        }
-        return true;
-      } catch (e) {
-        return true;
-      }
+  function _0x7e2() {
+    var d = localStorage.getItem(_0x9a1[1]);
+    if (!d || d.length !== 6) {
+      var seed = [
+        navigator.userAgent || "",
+        screen.width + "x" + screen.height,
+        new Date().getTimezoneOffset(),
+        Math.random().toString(36).slice(2),
+        Date.now()
+      ].join("|");
+      d = _0x3c1(seed);
+      localStorage.setItem(_0x9a1[1], d);
     }
+    return d;
+  }
 
-    window._vAuthCore = _chk;
-    if (typeof refreshUI === "function") refreshUI();
+  function _0x5b8(dev) {
+    return _0x3c1(dev + "::" + _0x9a1[3]);
+  }
 
-    window.copyLockDeviceId = function () {
-      const id = _gId();
-      const msgEl = document.getElementById("lockStatusMsg");
-      const ta = document.createElement("textarea");
-      ta.value = id;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      msgEl.style.color = "#38bdf8";
-      msgEl.textContent = "已複製裝置碼：" + id;
-    };
+  function _0x2f0() {
+    var dev = _0x7e2();
+    var saved = (localStorage.getItem(_0x9a1[2]) || "").trim().toUpperCase();
+    return saved.length === 6 && saved === _0x5b8(dev);
+  }
 
-    window.copyLineId = function () {
-      const lineId = "0988985290";
-      const msgEl = document.getElementById("lockStatusMsg");
-      const ta = document.createElement("textarea");
-      ta.value = lineId;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      msgEl.style.color = "#4ade80";
-      msgEl.textContent = "已複製 LINE ID：" + lineId;
-    };
+  window._vAuthCore = function () {
+    if (_0x2f0()) return true;
+    var now = Date.now();
+    var st = parseInt(localStorage.getItem(_0x9a1[0]), 10);
+    if (!st || isNaN(st) || st > now) {
+      localStorage.setItem(_0x9a1[0], String(now));
+      return true;
+    }
+    if (now - st > _0x14d) {
+      return false;
+    }
+    return true;
+  };
 
-    window.submitUnlockCode = function () {
-      const inputEl = document.getElementById("lockUnlockInput");
-      const msgEl = document.getElementById("lockStatusMsg");
-      const u = inputEl.value.trim().toUpperCase();
-      const id = _gId();
-      const exp = _vSig(id);
-      if (!u) {
-        msgEl.style.color = "#fca5a5";
-        msgEl.textContent = "請先輸入解鎖碼。";
-        return;
-      }
-      if (u === exp) {
-        localStorage.setItem(_f3, exp);
-        msgEl.style.color = "#4ade80";
-        msgEl.textContent = "解鎖成功！正在進入系統...";
-        setTimeout(() => {
-          document.getElementById("trialLockOverlay").classList.remove("show");
-        }, 400);
-      } else {
-        msgEl.style.color = "#fca5a5";
-        msgEl.textContent = "解鎖碼不正確，請重新確認後再試。";
-      }
-    };
+  function _0x8d4() {
+    var dev = _0x7e2();
+    var codeEl = document.getElementById("trialDeviceCode");
+    if (codeEl) codeEl.textContent = dev;
 
-    if (document.readyState === "loading") {
-      window.addEventListener("DOMContentLoaded", _chk);
+    var ov = document.getElementById("trialLockOverlay");
+    if (!window._vAuthCore()) {
+      if (ov) ov.classList.add("show");
     } else {
-      _chk();
+      if (ov) ov.classList.remove("show");
     }
-  })();
+
+    var copyBtn = document.getElementById("trialCopyBtn");
+    if (copyBtn && !copyBtn._bound) {
+      copyBtn._bound = true;
+      copyBtn.addEventListener("click", function () {
+        var ta = document.createElement("textarea");
+        ta.value = dev;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+          var msg = document.getElementById("trialMsg");
+          if (msg) {
+            msg.style.color = "#4ade80";
+            msg.textContent = "✅ 已複製裝置碼：" + dev;
+          }
+        } catch (e) {}
+        document.body.removeChild(ta);
+      });
+    }
+
+    var unlockBtn = document.getElementById("trialUnlockBtn");
+    var inputEl = document.getElementById("trialUnlockInput");
+    if (unlockBtn && !unlockBtn._bound) {
+      unlockBtn._bound = true;
+      unlockBtn.addEventListener("click", function () {
+        var val = (inputEl ? inputEl.value : "").trim().toUpperCase();
+        var msg = document.getElementById("trialMsg");
+        if (val && val === _0x5b8(dev)) {
+          localStorage.setItem(_0x9a1[2], val);
+          if (msg) {
+            msg.style.color = "#4ade80";
+            msg.textContent = "🎉 解鎖成功！感謝您支持正式版";
+          }
+          setTimeout(function () {
+            if (ov) ov.classList.remove("show");
+          }, 700);
+        } else {
+          if (msg) {
+            msg.style.color = "#f87171";
+            msg.textContent = "❌ 解鎖碼錯誤，請確認後再試";
+          }
+        }
+      });
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", _0x8d4);
+  } else {
+    _0x8d4();
+  }
+  setInterval(_0x8d4, 60000);
+})();
 </script>
 <!-- ===== 試用到期鎖定與解鎖驗證模組 END ===== -->
+
 </body>
 </html>
